@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<title>Cépages du Monde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=IM+Fell+English:ital@0;1&display=swap"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --bg:#060608;
+  --bg2:#0d0d12;
+  --bg3:#15151e;
+  --gold:#c9a84c;
+  --gold2:#e8c97a;
+  --cream:#f0e6d0;
+  --text:#c8cdd8;
+  --muted:#7a8090;
+  --border:#1e1e2e;
+  --accent:#1a1a30;
+  --wine:#8b1a2e;
+  --wine2:#c0405a;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Cormorant Garamond',Georgia,serif;color:var(--text)}
+#app{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+
+.header{padding-top:calc(14px + env(safe-area-inset-top));background:var(--bg);flex-shrink:0;border-bottom:1px solid var(--border)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;padding:0 16px 10px}
+.app-title{font-family:'IM Fell English',serif;font-size:21px;color:var(--gold2);letter-spacing:.04em}
+.lang-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:16px;cursor:pointer;color:var(--text)}
+
+.tabs{display:flex;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1;min-width:44px;padding:8px 4px;font-size:18px;color:var(--muted);background:none;border:none;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;text-align:center}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+.main{flex:1;overflow-y:auto;padding-bottom:calc(12px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+.hidden{display:none!important}
+
+.search-bar{padding:10px 16px 6px;background:var(--bg)}
+.search-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--cream);font-family:inherit;font-size:15px;outline:none}
+.search-input::placeholder{color:var(--muted)}
+.chips{display:flex;gap:8px;padding:6px 16px 10px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .2s;letter-spacing:.03em}
+.chip.active{background:var(--accent);border-color:var(--gold);color:var(--gold)}
+
+.cards{padding:0 12px}
+.card{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;cursor:pointer;transition:border-color .2s}
+.card:active{border-color:var(--gold)}
+.grape-img-wrap{width:58px;height:58px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:28px}
+.grape-img-wrap img{width:100%;height:100%;object-fit:cover}
+.grape-img{width:58px;height:58px;object-fit:cover;border-radius:8px;}
+.grape-img.loading{opacity:0;}
+.card-info{flex:1;min-width:0}
+.card-name{font-family:'IM Fell English',serif;font-size:16px;color:var(--cream);margin-bottom:2px}
+.card-origin{font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.03em}
+.arome-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px}
+.arome-fill{height:100%;background:linear-gradient(90deg,#1a0a1a,#5a1a3a,#c9a84c);border-radius:2px}
+.card-badge{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* DETAIL */
+#detailView{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;display:none;flex-direction:column;overflow:hidden}
+.detail-header{padding-top:calc(14px + env(safe-area-inset-top));background:var(--bg);flex-shrink:0;border-bottom:1px solid var(--border)}
+.detail-header-inner{display:flex;align-items:center;gap:10px;padding:0 16px 10px}
+.back-btn{background:none;border:none;color:var(--gold);font-size:20px;cursor:pointer;padding:4px 8px 4px 0}
+.detail-title{font-family:'IM Fell English',serif;color:var(--gold);font-size:19px;flex:1}
+.detail-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.detail-img-container{width:100%;height:210px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:80px}
+.detail-img-container img{width:100%;height:100%;object-fit:cover}
+.detail-content{padding:16px}
+.detail-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.meta-tag{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--muted)}
+.meta-tag span{color:var(--gold)}
+.detail-section{margin-bottom:16px}
+.detail-section h3{font-family:'IM Fell English',serif;color:var(--gold2);font-size:15px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.detail-section p{font-size:14px;line-height:1.7;color:var(--text)}
+.profil-box{background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:16px}
+.profil-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.profil-label{font-size:12px;color:var(--muted);width:90px;flex-shrink:0}
+.profil-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.profil-fill{height:100%;border-radius:3px}
+.fill-intensite{background:linear-gradient(90deg,#1a0a1a,#5a1a3a,#c9a84c)}
+.fill-arome{background:linear-gradient(90deg,#1a1a2a,#2a3a7a,#7ae8c9)}
+.fill-tanin{background:linear-gradient(90deg,#1a0a0a,#6a1a1a,#c97a7a)}
+.fill-acidite{background:linear-gradient(90deg,#0a1a0a,#1a5a1a,#7ac97a)}
+.fill-prestige{background:linear-gradient(90deg,#1a1400,#6a5500,#e8c97a)}
+.profil-value{font-size:12px;color:var(--gold);width:30px;text-align:right}
+
+.rank-list{padding:12px}
+.rank-item{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer}
+.rank-num{width:28px;text-align:center;font-family:'IM Fell English',serif;color:var(--muted);font-size:18px;flex-shrink:0}
+.rank-num.top3{color:var(--gold);font-size:20px}
+.rank-emoji{font-size:22px;flex-shrink:0}
+.rank-info{flex:1;min-width:0}
+.rank-name{font-family:'IM Fell English',serif;color:var(--cream);font-size:15px}
+.rank-region{font-size:11px;color:var(--muted)}
+.rank-bar-wrap{width:90px;flex-shrink:0}
+.rank-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:3px}
+.rank-fill{height:100%;background:linear-gradient(90deg,#2a0a1a,#c9a84c);border-radius:3px}
+.rank-score{font-size:11px;color:var(--gold);text-align:right}
+
+#mapView{display:flex;flex-direction:column;flex:1;overflow:hidden}
+#mapContainer{flex:1;min-height:0}
+#map{width:100%;height:100%}
+.leaflet-popup-content-wrapper{background:var(--bg2)!important;border:1px solid var(--gold)!important;border-radius:8px!important;color:var(--cream)!important}
+.leaflet-popup-tip{background:var(--bg2)!important}
+.popup-name{font-family:'IM Fell English',serif;font-size:14px;color:var(--gold);margin-bottom:4px}
+.popup-btn{background:var(--accent);border:1px solid var(--gold);border-radius:4px;color:var(--gold);padding:4px 10px;font-size:12px;margin-top:6px;cursor:pointer;font-family:inherit;display:block;width:100%;text-align:center}
+
+.quiz-container{padding:16px}
+.quiz-score-bar{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;text-align:center}
+.quiz-score-num{font-family:'IM Fell English',serif;font-size:36px;color:var(--gold)}
+.quiz-score-label{font-size:12px;color:var(--muted)}
+.quiz-question{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+.quiz-q-text{font-family:'IM Fell English',serif;font-size:17px;color:var(--cream);margin-bottom:14px;line-height:1.5}
+.quiz-answers{display:flex;flex-direction:column;gap:8px}
+.quiz-answer{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:14px;color:var(--text);cursor:pointer;text-align:left;font-family:inherit;transition:all .2s}
+.quiz-answer.correct{background:#1a3a1f;border-color:#4a7c59;color:#8abf9a}
+.quiz-answer.wrong{background:#3a1a1a;border-color:#7c4a4a;color:#bf8a8a}
+.quiz-answer.revealed{pointer-events:none}
+.quiz-next{width:100%;background:var(--accent);border:1px solid var(--gold);border-radius:8px;padding:12px;font-family:'IM Fell English',serif;font-size:16px;color:var(--gold);cursor:pointer;margin-top:8px;display:none}
+.quiz-reset{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:inherit;font-size:14px;color:var(--muted);cursor:pointer;margin-top:8px}
+
+.histoire-container{padding:12px}
+.histoire-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+.histoire-card-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.histoire-emoji{font-size:26px;flex-shrink:0}
+.histoire-period{font-family:'IM Fell English',serif;font-size:15px;color:var(--gold2)}
+.histoire-era{font-size:11px;color:var(--muted)}
+.histoire-text{font-size:13px;line-height:1.7;color:var(--text)}
+
+.apps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:12px}
+.app-item{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+.app-icon{width:58px;height:58px;border-radius:12px;background:var(--bg3);border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:26px}
+.app-icon img{width:100%;height:100%;object-fit:cover;border-radius:12px}
+.app-name{font-size:10px;color:var(--muted);text-align:center;line-height:1.3}
+.apps-section-title{font-family:'IM Fell English',serif;color:var(--gold);font-size:16px;padding:12px 16px 4px;border-bottom:1px solid var(--border);margin-bottom:4px}
+
+.cepages-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.cepage-tag{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--muted)}
+.cepage-tag.rouge{border-color:var(--wine2);color:var(--wine2)}
+.cepage-tag.blanc{border-color:#8a9a7a;color:#8a9a7a}
+.cepage-tag.rose{border-color:#c97ab0;color:#c97ab0}
+.vignob-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.vignob-header{display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer}
+.vignob-flag{font-size:26px;flex-shrink:0}
+.vignob-info{flex:1}
+.vignob-country{font-family:'IM Fell English',serif;font-size:16px;color:var(--cream)}
+.vignob-total{font-size:11px;color:var(--muted)}
+.vignob-leader{font-size:12px;color:var(--gold);margin-top:2px}
+.vignob-chev{font-size:14px;color:var(--muted);transition:transform .25s;flex-shrink:0}
+.vignob-chev.open{transform:rotate(90deg)}
+.vignob-body{display:none;border-top:1px solid var(--border);padding:10px 12px}
+.vignob-body.open{display:block}
+.vignob-note{font-size:12px;color:var(--muted);font-style:italic;margin-bottom:8px;line-height:1.5}
+.vignob-row{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border)}
+.vignob-row:last-child{border-bottom:none}
+.vignob-rk{width:16px;text-align:center;font-size:11px;color:var(--muted);flex-shrink:0}
+.vdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.vdot-r{background:var(--wine2)}.vdot-b{background:#8a9a7a}.vdot-p{background:#c97ab0}
+.vignob-nm{flex:1;font-size:13px;color:var(--text)}
+.vignob-bar{width:50px;flex-shrink:0}
+.vignob-bar-fill{height:4px;background:linear-gradient(90deg,#2a0a1a,#c9a84c);border-radius:2px}
+.vignob-pct{font-size:11px;color:var(--gold);width:40px;text-align:right;flex-shrink:0}
+.vignob-ha{font-size:10px;color:var(--muted);width:55px;text-align:right;flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="header">
+    <div class="header-inner">
+      <div class="app-title" id="appTitleEl">🍇 Cépages du Monde</div>
+      <button class="lang-btn" onclick="toggleLang()">🇬🇧</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('list',this)">🍇</button>
+      <button class="tab" onclick="switchTab('rank',this)">🏆</button>
+      <button class="tab" onclick="switchTab('map',this)">🗺️</button>
+      <button class="tab" onclick="switchTab('vignobles',this)">🌍</button>
+      <button class="tab" onclick="switchTab('histoire',this)">📜</button>
+      <button class="tab" onclick="switchTab('quiz',this)">❓</button>
+      <button class="tab" onclick="switchTab('apps',this)">📱</button>
+    </div>
+  </div>
+
+  <div id="listView" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div class="search-bar">
+      <input class="search-input" id="searchInput" placeholder="Rechercher un cépage..." oninput="filterCards()"/>
+    </div>
+    <div class="chips" id="chipsContainer"></div>
+    <div class="main" id="cardsContainer"></div>
+  </div>
+
+  <div id="rankView" class="main hidden">
+    <div class="rank-list" id="rankList"></div>
+  </div>
+
+  <div id="mapView" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+    <div id="mapContainer" style="flex:1;min-height:0">
+      <div id="map" style="width:100%;height:100%"></div>
+    </div>
+  </div>
+
+  <div id="vignobleView" class="main hidden">
+    <div id="vignobleList" style="padding:12px"></div>
+  </div>
+
+  <div id="histoireView" class="main hidden">
+    <div class="histoire-container" id="histoireContainer"></div>
+  </div>
+
+  <div id="quizView" class="main hidden">
+    <div class="quiz-container" id="quizContainer"></div>
+  </div>
+
+  <div id="appsView" class="main hidden">
+    <div id="appsList"></div>
+  </div>
+
+  <div id="detailView">
+    <div class="detail-header">
+      <div class="detail-header-inner">
+        <button class="back-btn" onclick="closeDetail()">←</button>
+        <div class="detail-title" id="detailTitle"></div>
+      </div>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+
+</div>
+<script>
+// ===================== DONNÉES CÉPAGES =====================
+const CEPAGES = [
+  {id:1,e:'🟣',couleur:'Rouge',fr:{n:'Cabernet Sauvignon',o:'France (Bordeaux)',d:'Le Cabernet Sauvignon est le cépage rouge le plus planté au monde. Né d\'un croisement naturel entre le Cabernet Franc et le Sauvignon Blanc dans le Bordelais au XVIIe siècle, il domine les grands châteaux de Pauillac (Mouton Rothschild, Latour, Lafite). Ses tanins puissants, son acidité élevée et sa capacité de vieillissement exceptionnelle en font le "roi des cépages rouges". Il exprime la cassis, le cèdre, le tabac et des notes végétales. Planté sur tous les continents, il donne les plus grands vins de Napa Valley, Coonawarra, Maipo et Toscane.'},en:{n:'Cabernet Sauvignon',o:'France (Bordeaux)',d:'Cabernet Sauvignon is the world\'s most planted red grape variety. Born of a natural cross between Cabernet Franc and Sauvignon Blanc in the Bordeaux region in the 17th century, it dominates the great châteaux of Pauillac (Mouton Rothschild, Latour, Lafite). Its powerful tannins, high acidity and exceptional ageing potential make it the "king of red grapes". It expresses blackcurrant, cedar, tobacco and vegetal notes. Planted on every continent, it produces the greatest wines of Napa Valley, Coonawarra, Maipo and Tuscany.'},region:'Europe',wiki:'Cabernet Sauvignon',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Cabernet_Sauvignon_grapes.jpg/960px-Cabernet_Sauvignon_grapes.jpg',intensite:88,arome:85,tanin:92,acidite:75,prestige:98,lat:45.1,lng:-0.7},
+  {id:2,e:'🍇',couleur:'Rouge',fr:{n:'Pinot Noir',o:'France (Bourgogne)',d:'Le Pinot Noir est le cépage des grands vins de Bourgogne : Romanée-Conti, Chambolle-Musigny, Gevrey-Chambertin. L\'un des plus anciens cépages connus, il est cultivé en Bourgogne depuis le IVe siècle. Réputé capricieux et délicat, il exige des terroirs d\'exception pour s\'exprimer pleinement. Ses vins sont d\'une finesse et d\'une complexité uniques : cerise, framboise, sous-bois, humus, épices. Il est également à la base des grands champagnes. Il donne des résultats remarquables en Allemagne (Spätburgunder), en Oregon, en Nouvelle-Zélande (Martinborough) et en Patagonie.'},en:{n:'Pinot Noir',o:'France (Burgundy)',d:'Pinot Noir is the grape of Burgundy\'s greatest wines: Romanée-Conti, Chambolle-Musigny, Gevrey-Chambertin. One of the oldest known grape varieties, it has been cultivated in Burgundy since the 4th century. Renowned as fickle and delicate, it requires exceptional terroirs to fully express itself. Its wines are of unique finesse and complexity: cherry, raspberry, undergrowth, humus, spices. It is also the basis of great champagnes. It produces remarkable results in Germany (Spätburgunder), Oregon, New Zealand (Martinborough) and Patagonia.'},region:'Europe',wiki:'Pinot noir',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Pinot_noir_06.jpg/640px-Pinot_noir_06.jpg',intensite:72,arome:95,tanin:62,acidite:85,prestige:99,lat:47.1,lng:4.8},
+  {id:3,e:'🍷',couleur:'Rouge',fr:{n:'Syrah / Shiraz',o:'France (Vallée du Rhône)',d:'La Syrah est le cépage emblématique de la vallée du Rhône septentrionnal (Hermitage, Côte-Rôtie, Cornas). Originaire de la région de Shiraz en Iran selon certaines théories, ou du Rhône selon d\'autres, elle donne des vins profondément colorés, riches en tanins et en alcool. Ses arômes caractéristiques sont la violette, le poivre noir, les fruits noirs, le cuir et le lard fumé. En Australie où elle est nommée Shiraz, elle produit des vins monumentaux dans la Barossa Valley (Penfolds Grange). Elle est aussi remarquable en Afrique du Sud et en Argentine.'},en:{n:'Syrah / Shiraz',o:'France (Rhône Valley)',d:'Syrah is the emblematic grape of the northern Rhône Valley (Hermitage, Côte-Rôtie, Cornas). Originating from the Shiraz region of Iran according to some theories, or from the Rhône according to others, it produces deeply colored wines rich in tannins and alcohol. Its characteristic aromas are violet, black pepper, dark fruits, leather and smoked bacon. In Australia where it is called Shiraz, it produces monumental wines in the Barossa Valley (Penfolds Grange). It is also remarkable in South Africa and Argentina.'},region:'Europe',wiki:'Syrah',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Syrah_grapes.jpg/640px-Syrah_grapes.jpg',intensite:90,arome:88,tanin:85,acidite:68,prestige:90,lat:45.0,lng:4.8},
+  {id:4,e:'🌕',couleur:'Blanc',fr:{n:'Chardonnay',o:'France (Bourgogne)',d:'Le Chardonnay est le cépage blanc le plus célèbre du monde. Originaire de Bourgogne, il est la base des plus grands vins blancs : Montrachet, Meursault, Puligny-Montrachet, Chablis. Il entre aussi dans la composition du Champagne (avec le Pinot Noir). Sa polyvalence est unique : élevé en fût de chêne, il exprime le beurre, la noisette, la vanille et la crème brûlée ; en acier inoxydable, il révèle pomme verte, citron et minéralité. On le plante avec succès en Californie (Napa, Sonoma), en Australie (Margaret River), au Chili et en Nouvelle-Zélande.'},en:{n:'Chardonnay',o:'France (Burgundy)',d:'Chardonnay is the world\'s most famous white grape variety. Originating from Burgundy, it is the basis of the greatest white wines: Montrachet, Meursault, Puligny-Montrachet, Chablis. It also forms part of Champagne (with Pinot Noir). Its versatility is unique: aged in oak barrels, it expresses butter, hazelnut, vanilla and crème brûlée; in stainless steel, it reveals green apple, lemon and minerality. It is successfully planted in California (Napa, Sonoma), Australia (Margaret River), Chile and New Zealand.'},region:'Europe',wiki:'Chardonnay',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Chardonnay_grapes.jpg/640px-Chardonnay_grapes.jpg',intensite:75,arome:88,tanin:15,acidite:78,prestige:96,lat:47.1,lng:4.8},
+  {id:5,e:'🟢',couleur:'Blanc',fr:{n:'Sauvignon Blanc',o:'France (Loire / Bordeaux)',d:'Le Sauvignon Blanc est l\'un des cépages blancs les plus aromatiques du monde. Il trouve son expression la plus pure dans le Val de Loire (Sancerre, Pouilly-Fumé) et à Bordeaux (Graves, Pessac-Léognan). Ses arômes distinctifs sont le buis, la groseille à maquereau, les agrumes, la pierre à fusil et les herbes fraîches (menthe, fougère). En Nouvelle-Zélande (Marlborough), il a révolutionné le vin mondial dans les années 1980 avec un style plus tropical et intense. Toujours vinifié sec, il est la base du Sauternes en assemblage avec le Sémillon.'},en:{n:'Sauvignon Blanc',o:'France (Loire / Bordeaux)',d:'Sauvignon Blanc is one of the world\'s most aromatic white grape varieties. It finds its purest expression in the Loire Valley (Sancerre, Pouilly-Fumé) and Bordeaux (Graves, Pessac-Léognan). Its distinctive aromas are boxwood, gooseberry, citrus, flint and fresh herbs (mint, fern). In New Zealand (Marlborough), it revolutionized the wine world in the 1980s with a more tropical and intense style. Always vinified dry, it is the basis of Sauternes when blended with Sémillon.'},region:'Europe',wiki:'Sauvignon blanc',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Sauvignon_blanc_09.jpg/640px-Sauvignon_blanc_09.jpg',intensite:72,arome:92,tanin:10,acidite:88,prestige:88,lat:47.4,lng:2.8},
+  {id:6,e:'🍇',couleur:'Rouge',fr:{n:'Merlot',o:'France (Bordeaux)',d:'Le Merlot est le cépage le plus planté en France et l\'un des plus répandus au monde. Il est le compagnon inséparable du Cabernet Sauvignon dans les assemblages bordelais, qu\'il adoucit et arrondit. À Saint-Émilion et à Pomerol, il trône en solitaire dans les vins les plus chers du monde : Pétrus (100% Merlot) et Cheval Blanc. Ses vins sont ronds, veloutés, aux arômes de prune, de mûre, de chocolat et de café. Plus précoce et moins tannique que le Cabernet Sauvignon, il s\'adapte à des terroirs variés. Sa popularité mondiale explose après le film Sideways (2004), puis déclina ironiquement.'},en:{n:'Merlot',o:'France (Bordeaux)',d:'Merlot is the most planted grape variety in France and one of the most widespread in the world. It is the inseparable companion of Cabernet Sauvignon in Bordeaux blends, which it softens and rounds. In Saint-Émilion and Pomerol, it reigns alone in the world\'s most expensive wines: Pétrus (100% Merlot) and Cheval Blanc. Its wines are round, velvety, with aromas of plum, blackberry, chocolate and coffee. More precocious and less tannic than Cabernet Sauvignon, it adapts to varied terroirs. Its worldwide popularity exploded after the film Sideways (2004), then declined ironically.'},region:'Europe',wiki:'Merlot',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Merlot_06.jpg/640px-Merlot_06.jpg',intensite:78,arome:80,tanin:72,acidite:65,prestige:90,lat:44.9,lng:-0.2},
+  {id:7,e:'🌹',couleur:'Blanc',fr:{n:'Riesling',o:'Allemagne (Rhénanie)',d:'Le Riesling est souvent considéré comme le cépage blanc le plus noble du monde par les grands sommeliers. Originaire des bords du Rhin en Allemagne, il atteint son apogée dans la Moselle (Bernkasteler Doctor), le Rheingau et l\'Alsace. Sa caractéristique unique est sa capacité à exprimer parfaitement le terroir et à vieillir pendant des décennies tout en développant des notes de pétrole très appréciées des connaisseurs. Il produit des vins secs, demi-secs, moelleux et liquoreux (Trockenbeerenauslese). Ses arômes : pêche blanche, pomme, lime, miel, fleurs blanches.'},en:{n:'Riesling',o:'Germany (Rhine)',d:'Riesling is often considered the world\'s noblest white grape by great sommeliers. Originating from the banks of the Rhine in Germany, it reaches its peak in the Moselle (Bernkasteler Doctor), Rheingau and Alsace. Its unique characteristic is its ability to perfectly express terroir and age for decades while developing petrol notes highly appreciated by connoisseurs. It produces dry, off-dry, semi-sweet and sweet wines (Trockenbeerenauslese). Its aromas: white peach, apple, lime, honey, white flowers.'},region:'Europe',wiki:'Riesling',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/Riesling_grapes.jpg/640px-Riesling_grapes.jpg',intensite:70,arome:94,tanin:8,acidite:95,prestige:92,lat:50.1,lng:7.2},
+  {id:8,e:'🔴',couleur:'Rouge',fr:{n:'Sangiovese',o:'Italie (Toscane)',d:'Le Sangiovese est le pilier de la viticulture italienne, cépage le plus planté en Italie. Il est l\'âme du Chianti Classico, du Brunello di Montalcino (100% Sangiovese Grosso dit Brunello) et du Vino Nobile di Montepulciano. À son apogée, le Brunello di Montalcino produit des vins d\'une longueur en bouche et d\'une complexité comparables aux plus grands Bourgognes. Ses arômes caractéristiques : cerise aigre, prune, cuir, terre cuite, herbes méditerranéennes et tabac. Ses tanins serrés et son acidité élevée le destinent au vieillissement.'},en:{n:'Sangiovese',o:'Italy (Tuscany)',d:'Sangiovese is the pillar of Italian viticulture, the most planted grape in Italy. It is the soul of Chianti Classico, Brunello di Montalcino (100% Sangiovese Grosso known as Brunello) and Vino Nobile di Montepulciano. At its peak, Brunello di Montalcino produces wines of length and complexity comparable to the greatest Burgundies. Its characteristic aromas: sour cherry, plum, leather, terracotta, Mediterranean herbs and tobacco. Its tight tannins and high acidity make it suited for aging.'},region:'Europe',wiki:'Sangiovese',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Sangiovese_grapes.jpg/640px-Sangiovese_grapes.jpg',intensite:82,arome:83,tanin:88,acidite:88,prestige:88,lat:43.3,lng:11.3},
+  {id:9,e:'🟡',couleur:'Blanc',fr:{n:'Viognier',o:'France (Rhône septentrional)',d:'Le Viognier est le cépage exclusif de Condrieu et du Château-Grillet dans le Rhône septentrional, deux appellations parmi les plus rares et chères de France. Proche de l\'extinction dans les années 1960 (seuls quelques hectares subsistaient), il a connu un renouveau spectaculaire depuis les années 1990. Ses arômes flamboyants d\'abricot, de pêche blanche, de violette et de fleurs exotiques en font l\'un des plus expressifs des cépages blancs. Son acidité naturellement basse lui donne une texture onctueuse, presque grasse. Utilisé aussi en assemblage avec la Syrah dans la Côte-Rôtie.'},en:{n:'Viognier',o:'France (Northern Rhône)',d:'Viognier is the exclusive grape of Condrieu and Château-Grillet in the northern Rhône, two appellations among the rarest and most expensive in France. Near extinction in the 1960s (only a few hectares remained), it has undergone a spectacular revival since the 1990s. Its flamboyant aromas of apricot, white peach, violet and exotic flowers make it one of the most expressive of white grape varieties. Its naturally low acidity gives it an unctuous, almost oily texture. Also used in blends with Syrah in Côte-Rôtie.'},region:'Europe',wiki:'Viognier',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Viognier_grapes.jpg/640px-Viognier_grapes.jpg',intensite:74,arome:96,tanin:5,acidite:55,prestige:82,lat:45.4,lng:4.8},
+  {id:10,e:'🍇',couleur:'Rouge',fr:{n:'Tempranillo',o:'Espagne (La Rioja)',d:'Le Tempranillo est l\'ambassadeur du vin espagnol dans le monde. Dominant en Rioja, Ribera del Duero et Toro, il est également planté au Portugal sous les noms Tinta Roriz et Aragonez (Douro, Alentejo). Son nom vient du castillan "temprano" (précoce) car il mûrit tôt. Ses vins aux couleurs grenat profond expriment la fraise, la cerise, le cuir, la vanille (après élevage en bois américain) et la réglisse. Les grands Riojas (Gran Reserva) peuvent rivaliser avec les meilleurs Bordeaux en termes de longueur et de complexité. Vega Sicilia et Pingus en sont les expressions les plus prestigieuses.'},en:{n:'Tempranillo',o:'Spain (La Rioja)',d:'Tempranillo is the ambassador of Spanish wine worldwide. Dominant in Rioja, Ribera del Duero and Toro, it is also planted in Portugal under the names Tinta Roriz and Aragonez (Douro, Alentejo). Its name comes from the Castilian "temprano" (early) as it ripens early. Its deep garnet-colored wines express strawberry, cherry, leather, vanilla (after aging in American oak) and licorice. Great Riojas (Gran Reserva) can rival the finest Bordeaux in terms of length and complexity. Vega Sicilia and Pingus are its most prestigious expressions.'},region:'Europe',wiki:'Tempranillo',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Tempranillo_uvas.jpg/640px-Tempranillo_uvas.jpg',intensite:80,arome:80,tanin:78,acidite:68,prestige:85,lat:42.5,lng:-2.5},
+  {id:11,e:'🌕',couleur:'Blanc',fr:{n:'Gewurztraminer',o:'Alsace (France) / Italie (Tyrol)',d:'Le Gewurztraminer est l\'un des cépages les plus reconnaissables du monde grâce à ses arômes explosifs et immédiatement identifiables : litchi, rose, gingembre, épices orientales, fleurs de jasmin. Son nom allemand signifie littéralement "épicé de Tramin", village du Tyrol du Sud. Il est au cœur de l\'identité alsacienne avec des versions allant du sec au Vendanges Tardives et Sélection de Grains Nobles moelleux. Sa couleur dorée intense et sa texture onctueuse en font un vin reconnaissable entre tous. Paradoxalement, malgré ses arômes sucrés, il peut être totalement sec.'},en:{n:'Gewurztraminer',o:'Alsace (France) / Italy (Tyrol)',d:'Gewurztraminer is one of the world\'s most recognizable grape varieties thanks to its explosive and immediately identifiable aromas: lychee, rose, ginger, oriental spices, jasmine flowers. Its German name literally means "spicy from Tramin", a village in South Tyrol. It is at the heart of Alsatian identity with versions ranging from dry to late harvest and Selection de Grains Nobles. Its intense golden color and unctuous texture make it a uniquely recognizable wine. Paradoxically, despite its sweet aromas, it can be totally dry.'},region:'Europe',wiki:'Gewürztraminer',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Gewurztraminer_wv.jpg/640px-Gewurztraminer_wv.jpg',intensite:76,arome:98,tanin:5,acidite:52,prestige:80,lat:48.0,lng:7.3},
+  {id:12,e:'🌑',couleur:'Rouge',fr:{n:'Nebbiolo',o:'Italie (Piémont)',d:'Le Nebbiolo est le cépage du Piémont italien et l\'un des plus grands rouges du monde. Il est la base du Barolo ("le roi des vins, le vin des rois") et du Barbaresco, deux DOCG parmi les plus réputées d\'Italie. Son nom vient du mot piémontais "nebbia" (brouillard), car il mûrit tardivement dans les brumes automnales des Langhe. Ses vins sont d\'une austérité et d\'une rigueur peu communes : tanins âpres, acidité élevée, longévité exceptionnelle. Mais vieillis, ils révèlent une complexité aromatique incomparable : rose séchée, goudron, réglisse, épices, sous-bois. Presque impossible à cultiver hors du Piémont.'},en:{n:'Nebbiolo',o:'Italy (Piedmont)',d:'Nebbiolo is the grape of Piedmont and one of the world\'s greatest reds. It is the basis of Barolo ("the king of wines, the wine of kings") and Barbaresco, two DOCGs among Italy\'s most prestigious. Its name comes from the Piedmontese word "nebbia" (fog), as it ripens late in the autumn mists of the Langhe. Its wines are of uncommon austerity and rigor: harsh tannins, high acidity, exceptional longevity. But aged, they reveal incomparable aromatic complexity: dried rose, tar, licorice, spices, undergrowth. Almost impossible to grow outside Piedmont.'},region:'Europe',wiki:'Nebbiolo',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Barolo_wine_region_Piedmont_Italy.jpg/640px-Barolo_wine_region_Piedmont_Italy.jpg',intensite:78,arome:92,tanin:95,acidite:90,prestige:94,lat:44.6,lng:8.0},
+  {id:13,e:'🟤',couleur:'Rouge',fr:{n:'Grenache / Garnacha',o:'Espagne (Aragon)',d:'Le Grenache est l\'un des cépages les plus plantés au monde. Originaire d\'Aragon en Espagne, il domine la Vallée du Rhône méridionale (Châteauneuf-du-Pape, Gigondas) et les Roussillon, la Sardaigne (Cannonau) et une grande partie de l\'Espagne. Ses vins sont généreux, chaleureux, riches en alcool et aux arômes de fraise, cerise, garrigue, herbes sèches et épices. Il est rarement vinifié seul mais constitue la base des grands assemblages rhôdaniens (avec Syrah et Mourvèdre dans le GSM). Les très vieilles vignes de Priorat (Catalogne) produisent des Grenaches d\'une concentration exceptionnelle.'},en:{n:'Grenache / Garnacha',o:'Spain (Aragon)',d:'Grenache is one of the world\'s most planted grape varieties. Originating from Aragon in Spain, it dominates the southern Rhône Valley (Châteauneuf-du-Pape, Gigondas), Roussillon, Sardinia (Cannonau) and much of Spain. Its wines are generous, warm, high in alcohol with aromas of strawberry, cherry, garrigue, dry herbs and spices. Rarely vinified alone but forms the basis of great Rhône blends (with Syrah and Mourvèdre in the GSM). Very old vines in Priorat (Catalonia) produce Grenaches of exceptional concentration.'},region:'Europe',wiki:'Grenache',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Grenache_blanc_02.jpg/640px-Grenache_blanc_02.jpg',intensite:80,arome:78,tanin:65,acidite:60,prestige:80,lat:41.5,lng:-0.9},
+  {id:14,e:'🌙',couleur:'Rouge',fr:{n:'Malbec',o:'France (Cahors) / Argentine',d:'Le Malbec illustre parfaitement le destin contrasté d\'un cépage : mineur en France (Cahors, appelé Côt ou Auxerrois), il est devenu en Argentine le cépage national et l\'un des plus reconnus du monde. Introduit à Mendoza par un agronome français en 1853, il a trouvé dans les hauteurs andines (Luján de Cuyo, Valle de Uco) des conditions idéales. Les Malbecs argentins sont des vins intenses, violacés, aux arômes de prune, de violette, de chocolat et d\'épices douces avec des tanins veloutés. Les Malbecs de Cahors restent plus austères, tanniques et terreux.'},en:{n:'Malbec',o:'France (Cahors) / Argentina',d:'Malbec perfectly illustrates the contrasting destiny of a grape: minor in France (Cahors, called Côt or Auxerrois), it has become the national grape of Argentina and one of the most recognized in the world. Introduced to Mendoza by a French agronomist in 1853, it found ideal conditions in the Andean foothills (Luján de Cuyo, Valle de Uco). Argentine Malbecs are intense, violet-hued wines with aromas of plum, violet, chocolate and soft spices with velvety tannins. Cahors Malbecs remain more austere, tannic and earthy.'},region:'Amériques',wiki:'Malbec',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Malbec_grapes_on_the_vine.jpg/640px-Malbec_grapes_on_the_vine.jpg',intensite:84,arome:82,tanin:80,acidite:68,prestige:82,lat:-33.0,lng:-68.8},
+  {id:15,e:'🟢',couleur:'Blanc',fr:{n:'Chenin Blanc',o:'France (Loire)',d:'Le Chenin Blanc est le cépage roi de la Loire, issu de l\'Anjou au XIVe siècle. Sa polyvalence est remarquable : il produit des vins secs de grande minéralité (Savennières), des moelleux (Coteaux du Layon), des liquoreux parmi les plus longevifs du monde (Quarts de Chaume, Bonnezeaux) et des effervescents (Vouvray, Saumur). Sa capacité de vieillissement est légendaire : les grands Vouvrays moelleux peuvent atteindre 50 à 100 ans. En Afrique du Sud où il est nommé "Steen", c\'est le cépage le plus planté, produisant des vins d\'une qualité croissante.'},en:{n:'Chenin Blanc',o:'France (Loire)',d:'Chenin Blanc is the king grape of the Loire, originating from Anjou in the 14th century. Its versatility is remarkable: it produces dry wines of great minerality (Savennières), sweet wines (Coteaux du Layon), some of the world\'s longest-lived dessert wines (Quarts de Chaume, Bonnezeaux) and sparkling wines (Vouvray, Saumur). Its ageing potential is legendary: great sweet Vouvrays can reach 50 to 100 years. In South Africa where it is called "Steen", it is the most planted grape, producing wines of growing quality.'},region:'Europe',wiki:'Chenin blanc',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Chenin_blanc_2.jpg/640px-Chenin_blanc_2.jpg',intensite:72,arome:86,tanin:8,acidite:90,prestige:80,lat:47.3,lng:-0.6},
+  {id:16,e:'⚫',couleur:'Rouge',fr:{n:'Cabernet Franc',o:'France (Loire / Bordeaux)',d:'Le Cabernet Franc est l\'ancêtre génétique du Cabernet Sauvignon (avec le Sauvignon Blanc). Longtemps dans l\'ombre de son illustre descendant, il fait aujourd\'hui l\'objet d\'un intérêt croissant. Dans la Loire (Bourgueil, Chinon, Saumur-Champigny), il produit des vins d\'une élégance et d\'une fraîcheur remarquables. À Saint-Émilion (Cheval Blanc comporte 57% de Cabernet Franc) et à Pomerol, il apporte complexité et longueur. Ses arômes : poivron vert, framboise, violette, graphite, ardoise. En Toscane, au Chili et en Napa, il donne des résultats impressionnants.'},en:{n:'Cabernet Franc',o:'France (Loire / Bordeaux)',d:'Cabernet Franc is the genetic ancestor of Cabernet Sauvignon (with Sauvignon Blanc). Long in the shadow of its illustrious descendant, it is today attracting growing interest. In the Loire (Bourgueil, Chinon, Saumur-Champigny), it produces wines of remarkable elegance and freshness. In Saint-Émilion (Cheval Blanc comprises 57% Cabernet Franc) and Pomerol, it brings complexity and length. Its aromas: green pepper, raspberry, violet, graphite, slate. In Tuscany, Chile and Napa, it produces impressive results.'},region:'Europe',wiki:'Cabernet Franc',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Cabernet_franc_grapes.jpg/640px-Cabernet_franc_grapes.jpg',intensite:75,arome:82,tanin:75,acidite:80,prestige:82,lat:47.2,lng:0.1},
+  {id:17,e:'🟡',couleur:'Blanc',fr:{n:'Grüner Veltliner',o:'Autriche (Wachau)',d:'Le Grüner Veltliner est le cépage blanc dominant d\'Autriche, représentant 30% du vignoble national. Il atteint son expression la plus haute dans les terrasses de granite et de loess de la Wachau (Smaragd), du Kamptal et du Kremstal, produisant des vins d\'une minéralité et d\'une précision saisissantes. Ses arômes sont signature : poivre blanc (très caractéristique), agrumes verts, herbes fraîches, citron vert et notes minérales. Sa texture est élancée, son acidité vivifiante. Les grands Grüner Veltliner Premier Cru (Erste Lage) rivalisent avec les meilleurs Bourgognes blancs.'},en:{n:'Grüner Veltliner',o:'Austria (Wachau)',d:'Grüner Veltliner is the dominant white grape of Austria, representing 30% of the national vineyard. It reaches its highest expression in the granite and loess terraces of the Wachau (Smaragd), Kamptal and Kremstal, producing wines of striking minerality and precision. Its aromas are signature: white pepper (very characteristic), green citrus, fresh herbs, lime and mineral notes. Its texture is lean, its acidity invigorating. Great Grüner Veltliner Premier Cru (Erste Lage) rival the finest white Burgundies.'},region:'Europe',wiki:'Grüner Veltliner',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Gruner_Veltliner_Weintrauben.JPG/640px-Gruner_Veltliner_Weintrauben.JPG',intensite:72,arome:84,tanin:8,acidite:88,prestige:78,lat:48.4,lng:15.4},
+  {id:18,e:'🔴',couleur:'Rouge',fr:{n:'Zinfandel / Primitivo',o:'Croatie / États-Unis / Italie',d:'Le Zinfandel est le cépage "américain" par excellence, emblème de la Californie. Génétiquement identique au Primitivo de Puglia (Italie) et au Crljenak Kaštelanski de Croatie, il a été introduit en Californie au XIXe siècle. Il produit des vins à l\'américaine : riches, concentrés, généreux en alcool (souvent 15-16%), aux arômes de mûre, confiture de framboises, épices, réglisse et chocolat. Les vieilles vignes de Sonoma (Russian River Valley, Dry Creek Valley) donnent des vins d\'une profondeur remarquable. Il existe aussi en version "White Zinfandel" rosé très sucré.'},en:{n:'Zinfandel / Primitivo',o:'Croatia / USA / Italy',d:'Zinfandel is the quintessentially "American" grape, the emblem of California. Genetically identical to Primitivo from Puglia (Italy) and Crljenak Kaštelanski from Croatia, it was introduced to California in the 19th century. It produces American-style wines: rich, concentrated, generous in alcohol (often 15-16%), with aromas of blackberry, raspberry jam, spices, licorice and chocolate. Old vines in Sonoma (Russian River Valley, Dry Creek Valley) produce wines of remarkable depth. It also exists as "White Zinfandel", a very sweet rosé.'},region:'Amériques',wiki:'Zinfandel',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Zinfandel_grapes.jpg/640px-Zinfandel_grapes.jpg',intensite:86,arome:80,tanin:72,acidite:65,prestige:72,lat:38.5,lng:-122.8},
+  {id:19,e:'🌸',couleur:'Rose',fr:{n:'Grenache Gris',o:'France (Roussillon)',d:'Le Grenache Gris est une mutation du Grenache Noir, donnant des baies à la robe grise-rosée caractéristique. Il est au cœur de l\'identité viticole du Roussillon, notamment pour les grands vins doux naturels (Rivesaltes, Banyuls Rimage, Maury). Ses vins présentent des arômes de pêche blanche, d\'abricot confit, de fleurs séchées et de miel. En vinification sèche, il donne des rosés profonds et des blancs gourmands. Très bien adapté aux étés méditerranéens chauds et secs, il est aussi présent en Sardaigne et dans les Pouilles.'},en:{n:'Grenache Gris',o:'France (Roussillon)',d:'Grenache Gris is a mutation of Grenache Noir, producing berries with a characteristic grey-pink hue. It is at the heart of Roussillon\'s viticultural identity, particularly for great naturally sweet wines (Rivesaltes, Banyuls Rimage, Maury). Its wines present aromas of white peach, candied apricot, dried flowers and honey. In dry vinification, it produces deep rosés and rich whites. Very well adapted to hot, dry Mediterranean summers, it is also present in Sardinia and Puglia.'},region:'Europe',wiki:'Grenache gris',wt:'https://upload.wikimedia.org/wikipedia/commons/f/fc/Grenache_gris_-_Ampélographie.jpg',intensite:70,arome:80,tanin:20,acidite:60,prestige:68,lat:42.7,lng:2.9},
+  {id:20,e:'⚪',couleur:'Blanc',fr:{n:'Albariño / Alvarinho',o:'Espagne (Galice) / Portugal',d:'L\'Albariño est le cépage phare des Rías Baixas en Galice (Espagne) et du Vinho Verde au Portugal (où il est nommé Alvarinho). Probablement introduit par des moines cisterciens au XIIe siècle, il produit des blancs frais, vifs et aromatiques idéaux pour les fruits de mer et le poisson. Ses arômes distinctifs sont le pamplemousse, la pêche blanche, les fleurs de pommier, le zeste de citron et une fine amertume en finale. Son acidité naturellement élevée et sa faible teneur en alcool en font un vin de gastronomie idéal. La success story mondiale de ce cépage ibérique depuis les années 2000 est remarquable.'},en:{n:'Albariño / Alvarinho',o:'Spain (Galicia) / Portugal',d:'Albariño is the flagship grape of Rías Baixas in Galicia (Spain) and Vinho Verde in Portugal (where it is called Alvarinho). Probably introduced by Cistercian monks in the 12th century, it produces fresh, lively and aromatic whites ideal for seafood and fish. Its distinctive aromas are grapefruit, white peach, apple blossom, lemon zest and a fine bitterness on the finish. Its naturally high acidity and low alcohol content make it an ideal gastronomic wine. The global success story of this Iberian grape since the 2000s is remarkable.'},region:'Europe',wiki:'Albariño',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Alvarinho_grapes.jpg/640px-Alvarinho_grapes.jpg',intensite:68,arome:86,tanin:5,acidite:88,prestige:76,lat:42.3,lng:-8.7},
+  {id:21,e:'🟣',couleur:'Rouge',fr:{n:'Pinotage',o:'Afrique du Sud',d:'Le Pinotage est le cépage emblématique de l\'Afrique du Sud, créé en 1925 par le professeur Abraham Izak Perold à l\'université de Stellenbosch par croisement entre le Pinot Noir et le Cinsault (appelé Hermitage en Afrique du Sud, d\'où le nom Pinotage). Il donne des vins originaux aux arômes de prune, banane, café, fumée et caoutchouc. Longtemps controversé pour ses notes de pneu brûlé, il a été réhabilité par une nouvelle génération de vignerons maîtrisant la vinification. Planté quasi exclusivement en Afrique du Sud (dans le Stellenbosch, la Paarl), il est la fierté nationale viticole.'},en:{n:'Pinotage',o:'South Africa',d:'Pinotage is the emblematic grape of South Africa, created in 1925 by Professor Abraham Izak Perold at Stellenbosch University by crossing Pinot Noir and Cinsault (called Hermitage in South Africa, hence the name Pinotage). It produces original wines with aromas of plum, banana, coffee, smoke and rubber. Long controversial for its burnt tyre notes, it has been rehabilitated by a new generation of winemakers mastering vinification. Planted almost exclusively in South Africa (Stellenbosch, Paarl), it is the national viticultural pride.'},region:'Afrique',wiki:'Pinotage',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Namibia_-_Windhoek_train_station_16.jpg/960px-Namibia_-_Windhoek_train_station_16.jpg',intensite:78,arome:72,tanin:78,acidite:68,prestige:68,lat:-33.9,lng:18.8},
+  {id:22,e:'🌿',couleur:'Blanc',fr:{n:'Vermentino',o:'Italie (Sardaigne / Toscane)',d:'Le Vermentino est le cépage blanc de la Méditerranée par excellence. Il donne ses plus belles expressions en Sardaigne (Vermentino di Gallura DOCG, le seul DOCG blanc de l\'île) et dans la Toscane côtière (Bolgheri). Apporté probablement par les Génois au Moyen Âge, il est aussi présent en Corse (Vermentinu), en Provence et en Languedoc. Ses arômes sont liés au soleil et à la mer : amande fraîche, agrumes, fleurs blanches, herbes aromatiques et une fine amertume minérale en fin de bouche. Sa texture est grasse et généreuse, son acidité modérée.'},en:{n:'Vermentino',o:'Italy (Sardinia / Tuscany)',d:'Vermentino is the quintessential Mediterranean white grape. It finds its finest expressions in Sardinia (Vermentino di Gallura DOCG, the island\'s only white DOCG) and coastal Tuscany (Bolgheri). Probably brought by the Genoese in the Middle Ages, it is also present in Corsica (Vermentinu), Provence and Languedoc. Its aromas are linked to sun and sea: fresh almond, citrus, white flowers, aromatic herbs and a fine mineral bitterness on the finish. Its texture is rich and generous, its acidity moderate.'},region:'Europe',wiki:'Vermentino',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/VermentinoBiancoGrapes.jpg/640px-VermentinoBiancoGrapes.jpg',intensite:68,arome:80,tanin:5,acidite:72,prestige:70,lat:40.9,lng:9.2},
+  {id:23,e:'🟡',couleur:'Blanc',fr:{n:'Pinot Gris / Pinot Grigio',o:'France (Alsace) / Italie',d:'Le Pinot Gris est une mutation du Pinot Noir. En Alsace, il donne des vins amples et opulents aux arômes de pêche, miel et épices. Sous le nom Pinot Grigio en Italie, il est vinifié dans un style beaucoup plus léger, très populaire mondialement. Il progresse fortement : +34% en Italie (25 000 ha), 6 000 ha en Allemagne (+63%), 8 000 ha aux États-Unis. C\'est le 4e cépage d\'Italie.'},en:{n:'Pinot Gris / Pinot Grigio',o:'France (Alsace) / Italy',d:'Pinot Gris is a mutation of Pinot Noir. In Alsace, it produces full, opulent wines with aromas of peach, honey and spices. As Pinot Grigio in Italy, it is vinified in a much lighter style, hugely popular worldwide. Strongly growing: +34% in Italy (25,000 ha), 6,000 ha in Germany (+63%), 8,000 ha in the USA. It is Italy\'s 4th grape variety.'},region:'Europe',wiki:'Pinot gris',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Pinot_gris_2007.jpg/640px-Pinot_gris_2007.jpg',intensite:74,arome:82,tanin:10,acidite:72,prestige:78,lat:48.2,lng:7.4},
+  {id:24,e:'🌺',couleur:'Rouge',fr:{n:'Carmenère',o:'France (Bordeaux) / Chili',d:'Le Carmenère est un ancien cépage bordelais quasiment disparu de France après le phylloxéra. Confondu avec le Merlot au Chili pendant un siècle, il y a été réidentifié en 1994. Aujourd\'hui cépage emblématique du Chili : 11 000 ha (5,1% du vignoble). Il produit des vins intenses aux arômes de poivron rouge, café, prune et épices. Son nom vient de la couleur carmin de ses feuilles en automne.'},en:{n:'Carmenère',o:'France (Bordeaux) / Chile',d:'Carmenère is an ancient Bordeaux grape that almost disappeared from France after phylloxera. Confused with Merlot in Chile for a century, it was re-identified there in 1994. Today Chile\'s emblematic grape: 11,000 ha (5.1% of vineyards). It produces intense wines with aromas of red pepper, coffee, plum and spices. Its name comes from the crimson color of its autumn leaves.'},region:'Amériques',wiki:'Carmenère',wt:'https://upload.wikimedia.org/wikipedia/commons/9/94/Carmenère_-_Ampélographie.jpg',intensite:82,arome:84,tanin:78,acidite:68,prestige:75,lat:-34.0,lng:-71.5},
+  {id:25,e:'⚪',couleur:'Blanc',fr:{n:'Assyrtiko',o:'Grèce (Santorin)',d:'L\'Assyrtiko est le grand cépage blanc de Grèce, originaire de Santorin. Cultivé dans des vignes en corbeille (kouloura) sur les sols volcaniques noirs de l\'île, il produit des vins d\'une minéralité et d\'une tension saisissantes. Ses arômes : citron, pamplemousse, pierre à fusil, sel marin. En forte croissance en Grèce ; il intéresse de plus en plus les vignerons du monde entier grâce à sa résistance à la sécheresse.'},en:{n:'Assyrtiko',o:'Greece (Santorini)',d:'Assyrtiko is the great white grape of Greece, originating from Santorini. Grown in basket-trained vines (kouloura) on the black volcanic soils of the island, it produces wines of striking minerality and tension. Its aromas: lemon, grapefruit, flint, sea salt. Strongly growing in Greece; it is attracting worldwide interest for its drought resistance.'},region:'Europe',wiki:'Assyrtiko',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Assyrtiko_grapes.jpg/640px-Assyrtiko_grapes.jpg',intensite:72,arome:85,tanin:5,acidite:92,prestige:76,lat:36.4,lng:25.4},
+  {id:26,e:'🔵',couleur:'Rouge',fr:{n:'Blaufränkisch / Kékfrankos',o:'Autriche / Hongrie / Allemagne',d:'Le Blaufränkisch est le 1er cépage rouge de Hongrie (Kékfrankos : 7 000 ha, 10,3% du vignoble) et pilier des grands vins du Burgenland autrichien. Ses vins sont épicés, structurés, aux arômes de cerise noire, poivre et réglisse. En Allemagne (Württemberg), il s\'appelle Lemberger. C\'est l\'un des cépages rouges autochtones les plus importants d\'Europe centrale.'},en:{n:'Blaufränkisch / Kékfrankos',o:'Austria / Hungary / Germany',d:'Blaufränkisch is Hungary\'s top red grape (Kékfrankos: 7,000 ha, 10.3% of vineyards) and the pillar of great Burgenland wines in Austria. Its wines are spicy and structured, with aromas of black cherry, pepper and licorice. In Germany (Württemberg), it is called Lemberger. It is one of the most important indigenous red grapes of Central Europe.'},region:'Europe',wiki:'Blaufränkisch',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Blaufrankisch_grapes_2007.jpg/640px-Blaufrankisch_grapes_2007.jpg',intensite:78,arome:80,tanin:78,acidite:82,prestige:72,lat:47.8,lng:16.5},
+  {id:27,e:'🟡',couleur:'Blanc',fr:{n:'Furmint',o:'Hongrie (Tokaj)',d:'Le Furmint est le cépage emblématique du Tokaj hongrois (4 000 ha, 5,9% du vignoble). Sa sensibilité naturelle à la pourriture noble (Botrytis cinerea) lui permet de donner naissance aux célèbres Tokaji Aszú, vins liquoreux aux arômes de miel, safran et abricot. En version sèche, il produit des vins d\'une acidité vive et d\'une minéralité saisissante. Les grands Tokay sont parmi les plus longevifs du monde (50+ ans).'},en:{n:'Furmint',o:'Hungary (Tokaj)',d:'Furmint is the emblematic grape of Hungarian Tokaj (4,000 ha, 5.9% of vineyards). Its natural susceptibility to noble rot (Botrytis cinerea) gives rise to the famous Tokaji Aszú, sweet wines with aromas of honey, saffron and apricot. In dry form, it produces wines of lively acidity and striking minerality. Great Tokay wines are among the world\'s longest-lived (50+ years).'},region:'Europe',wiki:'Furmint',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Furmint.jpg/640px-Furmint.jpg',intensite:70,arome:88,tanin:8,acidite:90,prestige:78,lat:48.1,lng:21.4},
+  {id:28,e:'⚪',couleur:'Blanc',fr:{n:'Müller-Thurgau / Rivaner',o:'Allemagne / Suisse',d:'Le Müller-Thurgau est un croisement Riesling x Madeleine Royale créé en 1882. 2e cépage d\'Allemagne : 13 000 ha (12,6%). Aussi présent au Luxembourg, Autriche et Suisse. Ses vins sont légers et aromatiques : fleurs blanches, muscate, notes légèrement épicées. Moins noble que le Riesling mais d\'une vinification plus facile et précoce.'},en:{n:'Müller-Thurgau / Rivaner',o:'Germany / Switzerland',d:'Müller-Thurgau is a Riesling x Madeleine Royale cross created in 1882. Germany\'s 2nd grape: 13,000 ha (12.6%). Also present in Luxembourg, Austria and Switzerland. Its wines are light and aromatic: white flowers, nutmeg, slightly spiced notes. Less noble than Riesling but easier and earlier to vinify.'},region:'Europe',wiki:'Müller-Thurgau',wt:'',intensite:60,arome:72,tanin:5,acidite:68,prestige:55,lat:51.0,lng:9.0},
+  {id:29,e:'🍾',couleur:'Blanc',fr:{n:'Glera / Prosecco',o:'Italie (Vénétie)',d:'Le Glera est le cépage à la base du Prosecco, le vin effervescent le plus vendu au monde. Cultivé dans les collines de Conegliano-Valdobbiadene (DOCG) en Vénétie, il a explosé ces 20 dernières années : +24% en Italie (27 000 ha — 4e cépage d\'Italie). Ses vins pétillants sont légers et très accessibles : fleurs blanches, poire, pêche. La production mondiale de Prosecco dépasse désormais celle du Champagne en volume.'},en:{n:'Glera / Prosecco',o:'Italy (Veneto)',d:'Glera is the grape behind Prosecco, the world\'s best-selling sparkling wine. Grown in the hills of Conegliano-Valdobbiadene (DOCG) in Veneto, it has exploded over the last 20 years: +24% in Italy (27,000 ha — Italy\'s 4th grape). Its sparkling wines are light and very accessible: white flowers, pear, peach. Global Prosecco production now exceeds Champagne in volume.'},region:'Europe',wiki:'Glera (grape)',wt:'',intensite:60,arome:75,tanin:5,acidite:78,prestige:65,lat:45.9,lng:12.0},
+  {id:30,e:'🌾',couleur:'Blanc',fr:{n:'Sémillon',o:'France (Bordeaux / Sauternes)',d:'Le Sémillon est le pilier des grands vins blancs de Bordeaux et la base des Sauternes liquoreux. En assemblage avec le Sauvignon Blanc (80-20%), il produit le Château d\'Yquem. Sa sensibilité au Botrytis cinerea (pourriture noble) est légendaire. En Australie (Hunter Valley) : 5 000 ha (3,4% du vignoble) — il vieillit extraordinairement bien en développant des notes de toast et de lanoline.'},en:{n:'Sémillon',o:'France (Bordeaux / Sauternes)',d:'Sémillon is the pillar of great Bordeaux whites and the basis of sweet Sauternes wines. Blended with Sauvignon Blanc (80-20%), it produces Château d\'Yquem. Its susceptibility to Botrytis cinerea (noble rot) is legendary. In Australia (Hunter Valley): 5,000 ha (3.4% of vineyards) — it ages extraordinarily well, developing toast and lanolin notes.'},region:'Europe',wiki:'Sémillon',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Semillon_Grapes.jpg/640px-Semillon_Grapes.jpg',intensite:68,arome:82,tanin:8,acidite:65,prestige:80,lat:44.5,lng:-0.4},
+  {id:31,e:'🌸',couleur:'Blanc',fr:{n:'Koshu',o:'Japon (Yamanashi)',d:'Le Koshu est le cépage emblématique du Japon, cultivé depuis plus de 1 000 ans dans la région de Yamanashi, au pied du Mont Fuji. Introduit probablement par la Route de la Soie depuis l\'Asie centrale, il est le seul cépage asiatique classé Vitis vinifera pura. Ses grappes rose-gris caractéristiques donnent des blancs d\'une légèreté et d\'une délicatesse uniques : pêche blanche, agrumes, fleurs, notes umami et salinité. Très faible en tanins et en alcool (11-12%), il est idéal avec la cuisine japonaise. Les producteurs comme Grace Winery et Château Mercian l\'ont imposé sur la scène internationale.'},en:{n:'Koshu',o:'Japan (Yamanashi)',d:'Koshu is Japan\'s emblematic grape variety, cultivated for over 1,000 years in the Yamanashi region at the foot of Mount Fuji. Probably introduced via the Silk Road from Central Asia, it is the only Asian grape classified as pure Vitis vinifera. Its characteristic pink-grey clusters produce whites of unique lightness and delicacy: white peach, citrus, flowers, umami notes and salinity. Very low in tannins and alcohol (11-12%), it pairs perfectly with Japanese cuisine. Producers like Grace Winery and Château Mercian have established it on the international scene.'},region:'Asie',wiki:'Koshu (grape)',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Koshu_grapes.jpg/640px-Koshu_grapes.jpg',intensite:55,arome:78,tanin:5,acidite:75,prestige:70,lat:35.6,lng:138.6},
+  {id:32,e:'🍇',couleur:'Rouge',fr:{n:'Muscat Bailey A',o:'Japon',d:'Le Muscat Bailey A est le principal cépage rouge du Japon, créé en 1927 par le pionnier viticole japonais Zenbei Kawakami à Niigata. C\'est un hybride entre le Bailey (Vitis labrusca x rupestris) et le Muscat Hambourg. Il produit des vins légers, aromatiques et fruités aux arômes de fraise des bois, framboise, notes florales et légère touche foxy. Peu tannique et très accessible, il est aussi utilisé pour les vins effervescents et les vins doux. Il représente environ 30% des cépages rouges plantés au Japon. Son nom est officiellement inscrit à l\'OIV.'},en:{n:'Muscat Bailey A',o:'Japan',d:'Muscat Bailey A is Japan\'s main red grape variety, created in 1927 by Japanese viticulture pioneer Zenbei Kawakami in Niigata. It is a hybrid between Bailey (Vitis labrusca x rupestris) and Muscat Hambourg. It produces light, aromatic and fruity wines with aromas of wild strawberry, raspberry, floral notes and a slight foxy touch. Low in tannins and very accessible, it is also used for sparkling wines and sweet wines. It represents about 30% of red grapes planted in Japan. Its name is officially registered with the OIV.'},region:'Asie',wiki:'Muscat Bailey A',wt:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Katsunuma_vineyard_02.jpg/500px-Katsunuma_vineyard_02.jpg',intensite:58,arome:82,tanin:38,acidite:70,prestige:62,lat:37.5,lng:139.0},
+  {id:33,e:'🟤',couleur:'Rouge',fr:{n:'Marselan',o:'France (INRAE) / Chine',d:'Le Marselan est un cépage créé en 1961 par l\'INRAE à Marseillan (Hérault) par croisement entre le Cabernet Sauvignon et le Grenache Noir. Longtemps confidentiel en France, il connaît depuis les années 2010 un succès inattendu en Chine, notamment dans la région de Ningxia, où il est devenu le cépage phare des vins qualitatifs. Il produit des vins intenses aux arômes de mûre, cassis, violette et épices, avec des tanins fins et une bonne structure. Ses 60 000 ha en Chine en font paradoxalement l\'un des cépages les plus plantés au monde. Résistant à la chaleur et à la sécheresse.'},en:{n:'Marselan',o:'France (INRAE) / China',d:'Marselan is a grape variety created in 1961 by INRAE in Marseillan (Hérault) by crossing Cabernet Sauvignon and Grenache Noir. Long confined to obscurity in France, since the 2010s it has found unexpected success in China, particularly in the Ningxia region, where it has become the flagship grape for quality wines. It produces intense wines with aromas of blackberry, blackcurrant, violet and spices, with fine tannins and good structure. Its 60,000 ha in China make it paradoxically one of the most planted grapes in the world. Resistant to heat and drought.'},region:'Asie',wiki:'Marselan',wt:'',intensite:80,arome:82,tanin:75,acidite:70,prestige:68,lat:37.5,lng:106.0}
+];
+
+// ===================== VIGNOBLES OIV 2018 =====================
+var VIGNOBLES=[
+  {pays:'Espagne',lat:40.4,lng:-3.7,flag:'🇪🇸',total:'974 000 ha',
+   fr:{leader:'Airen blanc (22,3%) + Tempranillo (20,8%)',note:'Tempranillo +41,5% en 15 ans malgré une baisse de 15% du vignoble total.'},
+   en:{leader:'Airen white (22.3%) + Tempranillo (20.8%)',note:'Tempranillo +41.5% in 15 years despite 15% overall vineyard decline.'},
+   c:[{n:'Airen',t:'b',ha:217000,p:22.3},{n:'Tempranillo',t:'r',ha:203000,p:20.8},{n:'Bobal',t:'r',ha:62000,p:6.4},{n:'Garnacha Tinta',t:'r',ha:46000,p:4.7},{n:'Monastrell',t:'r',ha:43000,p:4.4},{n:'Alicante Bouschet',t:'r',ha:26000,p:2.7},{n:'Pardina',t:'b',ha:25000,p:2.6},{n:'Cabernet Sauvignon',t:'r',ha:20000,p:2.1},{n:'Syrah',t:'r',ha:20000,p:2.1},{n:'Autres',t:'b',ha:250000,p:25.7}]},
+  {pays:'Chine',lat:35.0,lng:105.0,flag:'🇨🇳',total:'830 000 ha',
+   fr:{leader:'Kyoho (44%) — raisin de table dominant',note:'2/3 du vignoble en raisins de table. Cabernet Sauvignon (60 000 ha) en progression rapide.'},
+   en:{leader:'Kyoho (44%) — dominant table grape',note:'2/3 of vineyards are table grapes. Cabernet Sauvignon (60,000 ha) rapidly growing.'},
+   c:[{n:'Kyoho (table)',t:'r',ha:365000,p:44.0},{n:'Red Globe (table)',t:'r',ha:146000,p:17.6},{n:'Cabernet Sauvignon',t:'r',ha:60000,p:7.2},{n:'Carmenère',t:'r',ha:8000,p:1.0},{n:'Merlot',t:'r',ha:7000,p:0.8},{n:'Cabernet Franc',t:'r',ha:3000,p:0.4},{n:'Chardonnay',t:'b',ha:3000,p:0.3},{n:'Riesling',t:'b',ha:2000,p:0.3},{n:'Syrah',t:'r',ha:1000,p:0.2},{n:'Pinot Noir',t:'r',ha:1000,p:0.1}]},
+  {pays:'France',lat:46.5,lng:2.5,flag:'🇫🇷',total:'806 000 ha',
+   fr:{leader:'Merlot (13,9%) — seul cépage > 100 000 ha',note:'Pinot Noir, Sauvignon Blanc, Chardonnay et Syrah en forte croissance.'},
+   en:{leader:'Merlot (13.9%) — only grape >100,000 ha',note:'Pinot Noir, Sauvignon Blanc, Chardonnay and Syrah strongly growing.'},
+   c:[{n:'Merlot',t:'r',ha:112000,p:13.9},{n:'Ugni Blanc',t:'b',ha:82000,p:10.2},{n:'Grenache Noir',t:'r',ha:81000,p:10.0},{n:'Syrah',t:'r',ha:64000,p:7.9},{n:'Chardonnay',t:'b',ha:51000,p:6.3},{n:'Cabernet Sauvignon',t:'r',ha:48000,p:6.0},{n:'Cabernet Franc',t:'r',ha:33000,p:4.1},{n:'Carignan',t:'r',ha:33000,p:4.1},{n:'Pinot Noir',t:'r',ha:32000,p:4.0},{n:'Sauvignon Blanc',t:'b',ha:30000,p:3.7}]},
+  {pays:'Italie',lat:42.5,lng:12.5,flag:'🇮🇹',total:'682 000 ha',
+   fr:{leader:'Sangiovese (7,9%) — seul > 50 000 ha',note:'Top 10 = seulement 38% du vignoble. Glera +24%, Pinot Gris +34%.'},
+   en:{leader:'Sangiovese (7.9%) — only grape >50,000 ha',note:'Top 10 = only 38% of vineyards. Glera +24%, Pinot Gris +34%.'},
+   c:[{n:'Sangiovese',t:'r',ha:54000,p:7.9},{n:'Montepulciano',t:'r',ha:27000,p:4.0},{n:'Glera (Prosecco)',t:'b',ha:27000,p:4.0},{n:'Pinot Gris',t:'b',ha:25000,p:3.7},{n:'Merlot',t:'r',ha:24000,p:3.5},{n:'Italia (table)',t:'b',ha:22000,p:3.2},{n:'Catarratto Bianco',t:'b',ha:21000,p:3.1},{n:'Ugni Blanc',t:'b',ha:21000,p:3.1},{n:'Chardonnay',t:'b',ha:20000,p:2.9},{n:'Barbera',t:'r',ha:18000,p:2.6}]},
+  {pays:'États-Unis',lat:37.5,lng:-119.0,flag:'🇺🇸',total:'443 000 ha',
+   fr:{leader:'Chardonnay (9,7%) — 1er cépage de cuve',note:'Cabernet Sauvignon, Pinot Noir et Pinot Gris en forte expansion. Chardonnay en légère régression.'},
+   en:{leader:'Chardonnay (9.7%) — top wine grape',note:'Cabernet Sauvignon, Pinot Noir and Pinot Gris strongly expanding. Chardonnay slightly declining.'},
+   c:[{n:'Sultana (table)',t:'b',ha:60000,p:13.5},{n:'Chardonnay',t:'b',ha:43000,p:9.7},{n:'Cabernet Sauvignon',t:'r',ha:41000,p:9.3},{n:'Concord (table)',t:'r',ha:34000,p:7.7},{n:'Pinot Noir',t:'r',ha:25000,p:5.6},{n:'Merlot',t:'r',ha:21000,p:4.7},{n:'Zinfandel',t:'r',ha:19000,p:4.3},{n:'Syrah',t:'r',ha:9000,p:2.0},{n:'Pinot Gris',t:'b',ha:8000,p:1.8},{n:'Colombard',t:'b',ha:8000,p:1.8}]},
+  {pays:'Argentine',lat:-34.0,lng:-65.0,flag:'🇦🇷',total:'225 000 ha',
+   fr:{leader:'Malbec (17,8%) — a doublé en 15 ans',note:'Passage graduel vers les raisins noirs. Malbec +100%, Syrah aussi en forte progression.'},
+   en:{leader:'Malbec (17.8%) — doubled in 15 years',note:'Gradual shift to black grapes. Malbec +100%, Syrah also strongly growing.'},
+   c:[{n:'Malbec / Côt',t:'r',ha:40000,p:17.8},{n:'Cereza (rosé)',t:'p',ha:29000,p:12.9},{n:'Bonarda',t:'r',ha:19000,p:8.4},{n:'Criolla Grande',t:'r',ha:16000,p:7.1},{n:'Cabernet Sauvignon',t:'r',ha:15000,p:6.7},{n:'Syrah',t:'r',ha:13000,p:5.8},{n:'Pedro Ximenez',t:'b',ha:11000,p:4.9},{n:'Torrontés Riojano',t:'b',ha:8000,p:3.6},{n:'Moscatel Rosado',t:'p',ha:7000,p:3.1},{n:'Chardonnay',t:'b',ha:6000,p:2.7}]},
+  {pays:'Chili',lat:-35.0,lng:-71.5,flag:'🇨🇱',total:'214 000 ha',
+   fr:{leader:'Cabernet Sauvignon (20,1%)',note:'Vignoble +18% en 15 ans. Percée de la Syrah, Sauvignon Blanc et Carmenère.'},
+   en:{leader:'Cabernet Sauvignon (20.1%)',note:'Vineyard +18% in 15 years. Syrah, Sauvignon Blanc and Carmenère making strong inroads.'},
+   c:[{n:'Cabernet Sauvignon',t:'r',ha:43000,p:20.1},{n:'Sauvignon Blanc',t:'b',ha:15000,p:7.0},{n:'Mission (rosé)',t:'p',ha:13000,p:6.1},{n:'Merlot',t:'r',ha:12000,p:5.6},{n:'Sultanina (table)',t:'b',ha:12000,p:5.6},{n:'Chardonnay',t:'b',ha:12000,p:5.6},{n:'Carmenère',t:'r',ha:11000,p:5.1},{n:'Red Globe (table)',t:'r',ha:11000,p:5.1},{n:'Crimson Seedless',t:'r',ha:9000,p:4.2},{n:'Syrah',t:'r',ha:8000,p:3.8}]},
+  {pays:'Portugal',lat:39.5,lng:-8.0,flag:'🇵🇹',total:'199 000 ha',
+   fr:{leader:'Tempranillo / Tinta Roriz (9%)',note:'Grand nombre de variétés autochtones. Top 10 = seulement 55% — vignoble le plus diversifié d\'Europe.'},
+   en:{leader:'Tempranillo / Tinta Roriz (9%)',note:'Large number of indigenous varieties. Top 10 = only 55% — most diverse vineyard in Europe.'},
+   c:[{n:'Tempranillo / Tinta Roriz',t:'r',ha:18000,p:9.0},{n:'Touriga Franca',t:'r',ha:15000,p:7.5},{n:'Castelão',t:'r',ha:13000,p:6.5},{n:'Fernão Pires',t:'b',ha:13000,p:6.5},{n:'Touriga Nacional',t:'r',ha:12000,p:6.0},{n:'Trincadeira',t:'r',ha:11000,p:5.5},{n:'Baga',t:'r',ha:7000,p:3.5},{n:'Síria',t:'b',ha:7000,p:3.5},{n:'Arinto',t:'b',ha:6000,p:3.0},{n:'Syrah',t:'r',ha:6000,p:3.0}]},
+  {pays:'Roumanie',lat:45.9,lng:24.9,flag:'🇷🇴',total:'191 000 ha',
+   fr:{leader:'Feteasca Regala (6,8%) blanc autochtone',note:'Vignoble très diversifié. Aucune variété ne dépasse 7%. Le Merlot domine les cépages internationaux.'},
+   en:{leader:'Feteasca Regala (6.8%) — indigenous white',note:'Very diverse vineyard. No variety exceeds 7%. Merlot dominates international grapes.'},
+   c:[{n:'Feteasca Regala',t:'b',ha:13000,p:6.8},{n:'Feteasca Alba',t:'b',ha:12000,p:6.3},{n:'Merlot',t:'r',ha:12000,p:6.3},{n:'Riesling',t:'b',ha:6000,p:3.1},{n:'Aligoté',t:'b',ha:6000,p:3.1},{n:'Sauvignon Blanc',t:'b',ha:6000,p:3.1},{n:'Cabernet Sauvignon',t:'r',ha:5000,p:2.6},{n:'Muscat Ottonel',t:'b',ha:5000,p:2.6},{n:'Feteasca Neagra',t:'r',ha:3000,p:1.6},{n:'Rosioara (rosé)',t:'p',ha:3000,p:1.6}]},
+  {pays:'Australie',lat:-33.0,lng:138.0,flag:'🇦🇺',total:'149 000 ha',
+   fr:{leader:'Syrah / Shiraz (26,8%)',note:'Syrah + Cabernet Sauvignon + Chardonnay = 60% du vignoble. Variétés mineures en forte croissance.'},
+   en:{leader:'Syrah / Shiraz (26.8%)',note:'Syrah + Cabernet Sauvignon + Chardonnay = 60% of vineyards. Minor varieties growing strongly.'},
+   c:[{n:'Syrah / Shiraz',t:'r',ha:40000,p:26.8},{n:'Cabernet Sauvignon',t:'r',ha:25000,p:16.8},{n:'Chardonnay',t:'b',ha:21000,p:14.1},{n:'Merlot',t:'r',ha:8000,p:5.4},{n:'Sauvignon Blanc',t:'b',ha:6000,p:4.0},{n:'Pinot Noir',t:'r',ha:5000,p:3.4},{n:'Sémillon',t:'b',ha:5000,p:3.4},{n:'Pinot Gris',t:'b',ha:4000,p:2.7},{n:'Riesling',t:'b',ha:3000,p:2.0},{n:"Muscat d'Alexandrie",t:'b',ha:2000,p:1.3}]},
+  {pays:'Afrique du Sud',lat:-33.9,lng:18.4,flag:'🇿🇦',total:'130 000 ha',
+   fr:{leader:'Chenin Blanc / Steen (14,6%)',note:'3/4 du vignoble couverts par le top 10. Chenin Blanc très dominant.'},
+   en:{leader:'Chenin Blanc / Steen (14.6%)',note:'3/4 of vineyards covered by top 10. Chenin Blanc very dominant.'},
+   c:[{n:'Chenin Blanc / Steen',t:'b',ha:19000,p:14.6},{n:'Colombard',t:'b',ha:13000,p:10.0},{n:'Cabernet Sauvignon',t:'r',ha:12000,p:9.2},{n:'Syrah',t:'r',ha:11000,p:8.5},{n:'Sauvignon Blanc',t:'b',ha:10000,p:7.7},{n:'Sultanina (table)',t:'b',ha:8000,p:6.2},{n:'Pinotage',t:'r',ha:8000,p:6.2},{n:'Chardonnay',t:'b',ha:8000,p:6.2},{n:'Merlot',t:'r',ha:6000,p:4.6},{n:'Crimson Seedless',t:'b',ha:5000,p:3.8}]},
+  {pays:'Grèce',lat:39.0,lng:22.0,flag:'🇬🇷',total:'107 000 ha',
+   fr:{leader:'Savvatiano (10,3%) blanc autochtone',note:'Grande diversité autochtone. Montée en puissance de l\'Assyrtiko (Santorin) et du Liatiko.'},
+   en:{leader:'Savvatiano (10.3%) — indigenous white',note:'Great indigenous diversity. Assyrtiko (Santorini) and Liatiko gaining ground.'},
+   c:[{n:'Savvatiano',t:'b',ha:11000,p:10.3},{n:'Roditis (rosé)',t:'p',ha:9000,p:8.4},{n:'Sultanina (table)',t:'b',ha:9000,p:8.4},{n:'Muscat de Hambourg',t:'b',ha:3000,p:2.8},{n:'Agiorgitiko',t:'r',ha:3000,p:2.8},{n:'Liatiko',t:'r',ha:2000,p:1.9},{n:'Xinomavro',t:'r',ha:2000,p:1.9},{n:'Victoria (table)',t:'b',ha:2000,p:1.9},{n:'Cabernet Sauvignon',t:'r',ha:2000,p:1.9},{n:'Assyrtiko',t:'b',ha:2000,p:1.9}]},
+  {pays:'Allemagne',lat:51.0,lng:10.0,flag:'🇩🇪',total:'103 000 ha',
+   fr:{leader:'Riesling (23,3%)',note:'Vignoble stable depuis 2000. Riesling + Müller-Thurgau + Pinot Noir = 47%.'},
+   en:{leader:'Riesling (23.3%)',note:'Vineyard stable since 2000. Riesling + Müller-Thurgau + Pinot Noir = 47%.'},
+   c:[{n:'Riesling',t:'b',ha:24000,p:23.3},{n:'Müller-Thurgau',t:'b',ha:13000,p:12.6},{n:'Pinot Noir / Spätburgunder',t:'r',ha:12000,p:11.7},{n:'Dornfelder',t:'r',ha:8000,p:7.8},{n:'Pinot Gris / Grauburgunder',t:'b',ha:6000,p:5.8},{n:'Sylvaner',t:'b',ha:5000,p:4.9},{n:'Pinot Blanc / Weissburgunder',t:'b',ha:5000,p:4.9},{n:'Blauer Portugieser',t:'r',ha:3000,p:2.9},{n:'Kerner',t:'b',ha:3000,p:2.9},{n:'Trollinger',t:'r',ha:2000,p:1.9}]},
+  {pays:'Brésil',lat:-15.0,lng:-53.0,flag:'🇧🇷',total:'87 000 ha',
+   fr:{leader:'Isabella Noir (14,9%)',note:'Vignoble en croissance. 55% partagé entre des dizaines de variétés hybrides locales.'},
+   en:{leader:'Isabella Noir (14.9%)',note:'Growing vineyard. 55% shared among dozens of local hybrid varieties.'},
+   c:[{n:'Isabella',t:'r',ha:13000,p:14.9},{n:'Niagara Rosada (rosé)',t:'p',ha:11000,p:12.6},{n:'Bordo',t:'r',ha:10000,p:11.5},{n:'Italia (table)',t:'b',ha:9000,p:10.3},{n:'Niagara Branca',t:'b',ha:3000,p:3.4},{n:'Concord',t:'r',ha:2000,p:2.3},{n:'Alphonse Lavallée',t:'r',ha:2000,p:2.3},{n:'Couderc Noir',t:'r',ha:2000,p:2.3},{n:'Jacquez',t:'r',ha:1000,p:1.1},{n:'Cabernet Sauvignon',t:'r',ha:1000,p:1.1}]},
+  {pays:'Hongrie',lat:47.0,lng:19.5,flag:'🇭🇺',total:'68 000 ha',
+   fr:{leader:'Blaufränkisch / Kékfrankos (10,3%)',note:'Vignoble -30% depuis 2000. Bianca et Cserszegi Fuszeres en forte croissance.'},
+   en:{leader:'Blaufränkisch / Kékfrankos (10.3%)',note:'Vineyard -30% since 2000. Bianca and Cserszegi Fuszeres with remarkable growth.'},
+   c:[{n:'Blaufränkisch / Kékfrankos',t:'r',ha:7000,p:10.3},{n:'Bianca',t:'b',ha:5000,p:7.4},{n:'Cserszegi Fuszeres',t:'b',ha:4000,p:5.9},{n:'Welschriesling',t:'b',ha:4000,p:5.9},{n:'Furmint',t:'b',ha:4000,p:5.9},{n:'Cabernet Sauvignon',t:'r',ha:3000,p:4.4},{n:'Chardonnay',t:'b',ha:3000,p:4.4},{n:'Merlot',t:'r',ha:2000,p:2.9},{n:'Zweigelt',t:'r',ha:2000,p:2.9},{n:'Müller-Thurgau',t:'b',ha:2000,p:2.9}]},
+  {pays:'Japon',lat:35.6,lng:138.5,flag:'🇯🇵',total:'~20 000 ha',
+   fr:{leader:'Koshu (blanc autochtone) + Muscat Bailey A (rouge)',note:'Vignoble en essor qualitatif. Yamanashi, Nagano et Hokkaido régions phares. Koshu reconnu à l\'OIV. Vins exportés dans 40 pays.'},
+   en:{leader:'Koshu (indigenous white) + Muscat Bailey A (red)',note:'Vineyard with growing quality reputation. Yamanashi, Nagano and Hokkaido are top regions. Koshu recognized by OIV. Wines exported to 40 countries.'},
+   c:[{n:'Koshu',t:'b',ha:3500,p:17.5},{n:'Muscat Bailey A',t:'r',ha:3000,p:15.0},{n:'Chardonnay',t:'b',ha:1500,p:7.5},{n:'Merlot',t:'r',ha:1200,p:6.0},{n:'Cabernet Sauvignon',t:'r',ha:800,p:4.0},{n:'Pinot Noir',t:'r',ha:700,p:3.5},{n:'Niagara',t:'b',ha:600,p:3.0},{n:'Delaware',t:'r',ha:500,p:2.5},{n:'Sauvignon Blanc',t:'b',ha:400,p:2.0},{n:'Zweigelt',t:'r',ha:300,p:1.5}]},
+  {pays:'Inde',lat:17.0,lng:74.5,flag:'🇮🇳',total:'~15 000 ha (cuve)',
+   fr:{leader:'Shiraz / Syrah + Chenin Blanc',note:'Vignoble principalement en Maharashtra (Nashik, Pune) et Karnataka. Culture en altitude (600-900 m) pour compenser le climat tropical. Sula Vineyards leader du marché.'},
+   en:{leader:'Shiraz / Syrah + Chenin Blanc',note:'Vineyards mainly in Maharashtra (Nashik, Pune) and Karnataka. High-altitude viticulture (600-900 m) to offset the tropical climate. Sula Vineyards is the market leader.'},
+   c:[{n:'Shiraz / Syrah',t:'r',ha:3000,p:20.0},{n:'Cabernet Sauvignon',t:'r',ha:2500,p:16.7},{n:'Chenin Blanc',t:'b',ha:2000,p:13.3},{n:'Sauvignon Blanc',t:'b',ha:1500,p:10.0},{n:'Zinfandel',t:'r',ha:800,p:5.3},{n:'Viognier',t:'b',ha:600,p:4.0},{n:'Chardonnay',t:'b',ha:500,p:3.3},{n:'Grenache',t:'r',ha:400,p:2.7},{n:'Merlot',t:'r',ha:300,p:2.0},{n:'Sangiovese',t:'r',ha:200,p:1.3}]}
+];
+
+// ===================== HISTOIRE =====================
+const HISTOIRE=[
+  {emoji:'🏺',fr:{periode:'Antiquité — Les Premières Vignes',ere:'7000 – 500 av. J.-C.',texte:'La vigne (Vitis vinifera) est domestiquée vers 7 000 av. J.-C. dans le Caucase (Géorgie, Arménie) — la plus ancienne amphore de vin date de 6 000 av. J.-C. en Géorgie. Les Phéniciens diffusent la viticulture autour du bassin méditerranéen. Les Grecs l\'implantent en Sicile, en Italie du Sud et en Provence (Massalia/Marseille). Les Romains codifient les pratiques viticoles et répandent la vigne dans toute l\'Europe occidentale. Virgile et Pline l\'Ancien décrivent déjà des variétés et des terroirs distincts. Le vin est une boisson sacrée, liée à Dionysos/Bacchus.'},en:{periode:'Antiquity — The First Vines',ere:'7000 – 500 BC',texte:'The vine (Vitis vinifera) was domesticated around 7,000 BC in the Caucasus (Georgia, Armenia) — the oldest wine amphora dates to 6,000 BC in Georgia. The Phoenicians spread viticulture around the Mediterranean basin. The Greeks planted it in Sicily, southern Italy and Provence (Massalia/Marseille). The Romans codified viticultural practices and spread the vine across Western Europe. Virgil and Pliny the Elder already described distinct varieties and terroirs. Wine was a sacred drink, linked to Dionysus/Bacchus.'}},
+  {emoji:'⛪',fr:{periode:'Moyen Âge — L\'Église et le Vin',ere:'Ve – XVe siècle',texte:'L\'Église catholique joue un rôle déterminant dans la préservation et le développement de la viticulture après les invasions barbares. Les moines bénédictins (Clos de Vougeot en Bourgogne, XIIe siècle) et cisterciens développent une connaissance exceptionnelle des terroirs. L\'Église a besoin de vin pour la messe (vin de messe). Les châteaux bordelais se développent pour alimenter le commerce avec l\'Angleterre (Claret, vin clair de Bordeaux). Venise et Gênes contrôlent le commerce des vins doux de Chypre et de Crète (Commandaria, Malvoisie).'},en:{periode:'Middle Ages — The Church and Wine',ere:'5th – 15th century',texte:'The Catholic Church plays a decisive role in preserving and developing viticulture after the barbarian invasions. Benedictine monks (Clos de Vougeot in Burgundy, 12th century) and Cistercians develop exceptional knowledge of terroirs. The Church needs wine for Mass. Bordeaux châteaux develop to supply trade with England (Claret). Venice and Genoa control the trade in sweet wines from Cyprus and Crete (Commandaria, Malvasia).'}},
+  {emoji:'🚢',fr:{periode:'XVIIe-XVIIIe s. — Naissance des Grands Crus',ere:'1600 – 1800',texte:'Le XVIIe siècle voit naître les grands cépages bordelais modernes et la notion de "château". En 1666, Arnaud de Pontac popularise à Londres le "Haut Brion" — premier vin de château nommé. Le Champagne est inventé par Dom Pérignon vers 1697. Le Classement de 1855 hiérarchise les châteaux bordelais. Le Port et le Madère se développent pour résister aux longs voyages maritimes. Le cépage Riesling est mentionné pour la première fois en 1435 à Rüsselsheim. La notion de "cru" et de terroir s\'impose progressivement dans le vocabulaire viticole.'},en:{periode:'17th-18th c. — Birth of the Grands Crus',ere:'1600 – 1800',texte:'The 17th century sees the birth of the great modern Bordeaux grape varieties and the notion of "château". In 1666, Arnaud de Pontac popularizes "Haut Brion" in London — the first named château wine. Champagne is invented by Dom Pérignon around 1697. The Classification of 1855 ranks Bordeaux châteaux. Port and Madeira develop to withstand long sea voyages. The Riesling grape is first mentioned in 1435 at Rüsselsheim. The notion of "cru" and terroir gradually establishes itself in viticultural vocabulary.'}},
+  {emoji:'🦟',fr:{periode:'XIXe s. — Le Phylloxéra, Grande Catastrophe',ere:'1860 – 1900',texte:'Le phylloxéra (Daktulosphaira vitifoliae), un puceron microscopique originaire d\'Amérique du Nord, débarque en Europe vers 1860 et ravage en 30 ans la quasi-totalité du vignoble européen. La solution viendra des États-Unis : le greffage des Vitis vinifera européens sur des porte-greffes américains résistants. Cette catastrophe reconfigure entièrement le paysage viticole mondial, faisant disparaître des dizaines de cépages mineurs. Elle encourage également l\'émergence de nouveaux vignobles dans des régions non touchées : Australie, Chili, Argentine. Un cataclysme qui change l\'histoire du vin pour toujours.'},en:{periode:'19th c. — Phylloxera, the Great Catastrophe',ere:'1860 – 1900',texte:'Phylloxera (Daktulosphaira vitifoliae), a microscopic aphid originating from North America, arrived in Europe around 1860 and devastated almost all European vineyards within 30 years. The solution came from the United States: grafting European Vitis vinifera onto resistant American rootstocks. This catastrophe entirely reconfigured the world viticultural landscape, causing dozens of minor grape varieties to disappear. It also encouraged the emergence of new vineyards in unaffected regions: Australia, Chile, Argentina. A cataclysm that changed the history of wine forever.'}},
+  {emoji:'🌍',fr:{periode:'XXe s. — Mondialisation du Vin',ere:'1950 – 2000',texte:'L\'après-guerre voit une révolution qualitative portée par les œnologues comme Émile Peynaud (Bordeaux) et Jules Chauvet (Beaujolais). En 1976, le "Jugement de Paris" — dégustation à l\'aveugle remportée par des vins californiens face aux grands crus français — stupéfie le monde viticole. L\'Australie, la Nouvelle-Zélande, le Chili et l\'Argentine émergent comme producteurs mondiaux. Le cépage Cabernet Sauvignon devient le premier cépage "international" planté sur tous les continents. La notion de "cépages internationaux" vs "cépages autochtones" structure désormais le débat vinicole.'},en:{periode:'20th c. — Globalisation of Wine',ere:'1950 – 2000',texte:'The post-war period sees a quality revolution driven by oenologists like Émile Peynaud (Bordeaux) and Jules Chauvet (Beaujolais). In 1976, the "Judgment of Paris" — a blind tasting won by Californian wines against great French growths — stuns the wine world. Australia, New Zealand, Chile and Argentina emerge as world producers. Cabernet Sauvignon becomes the first "international" grape planted on every continent. The notion of "international" vs "indigenous" grape varieties now structures the wine debate.'}},
+  {emoji:'🌱',fr:{periode:'XXIe s. — Retour aux Cépages Autochtones',ere:'2000 – aujourd\'hui',texte:'Depuis 2000, on assiste à une réaction mondiale contre les "cépages internationaux" et à une redécouverte des variétés locales oubliées. L\'Italie met en valeur ses 350+ cépages autochtones (Nerello Mascalese sur l\'Etna, Fiano, Pecorino). La Géorgie retrouve ses 400+ variétés millénaires. Le changement climatique redessine la carte viticole mondiale : le Pinot Noir s\'étend au Danemark et en Angleterre ; les régions traditionnelles souffrent. Les vins naturels, biodynamiques et les amphores de qvevri géorgiens témoignent d\'une quête d\'authenticité et de retour aux origines.'},en:{periode:'21st c. — Return of Indigenous Grapes',ere:'2000 – today',texte:'Since 2000, there has been a worldwide reaction against "international grapes" and a rediscovery of forgotten local varieties. Italy highlights its 350+ indigenous grapes (Nerello Mascalese on Etna, Fiano, Pecorino). Georgia rediscovers its 400+ ancient varieties. Climate change redraws the world viticultural map: Pinot Noir extends to Denmark and England; traditional regions suffer. Natural and biodynamic wines and Georgian qvevri amphorae testify to a quest for authenticity and return to origins.'}}
+];
+
+// ===================== QUIZ =====================
+const QUIZ=[
+  {q:{fr:'Quels sont les parents génétiques du Cabernet Sauvignon ?',en:'What are the genetic parents of Cabernet Sauvignon?'},a:{fr:['Cabernet Franc + Sauvignon Blanc','Merlot + Malbec','Pinot Noir + Gamay','Cabernet Franc + Merlot'],en:['Cabernet Franc + Sauvignon Blanc','Merlot + Malbec','Pinot Noir + Gamay','Cabernet Franc + Merlot']},c:0},
+  {q:{fr:'Le Pinotage est un croisement entre quels cépages ?',en:'Pinotage is a cross between which grape varieties?'},a:{fr:['Pinot Noir + Cinsault','Pinot Noir + Syrah','Grenache + Cinsault','Merlot + Pinot Noir'],en:['Pinot Noir + Cinsault','Pinot Noir + Syrah','Grenache + Cinsault','Merlot + Pinot Noir']},c:0},
+  {q:{fr:'Dans quelle région le Malbec argentin a-t-il trouvé sa terre d\'élection ?',en:'In which Argentine region did Malbec find its ideal home?'},a:{fr:['Mendoza','Patagonie','Salta','Cafayate'],en:['Mendoza','Patagonia','Salta','Cafayate']},c:0},
+  {q:{fr:'Quel cépage est génétiquement identique au Zinfandel américain ?',en:'Which grape is genetically identical to American Zinfandel?'},a:{fr:['Primitivo (Puglia)','Sangiovese (Toscane)','Nebbiolo (Piémont)','Grenache (Rhône)'],en:['Primitivo (Puglia)','Sangiovese (Tuscany)','Nebbiolo (Piedmont)','Grenache (Rhône)']},c:0},
+  {q:{fr:'Le "Jugement de Paris" en 1976 a consacré les vins de quel pays contre les grands crus français ?',en:'The 1976 "Judgment of Paris" crowned the wines of which country against French grands crus?'},a:{fr:['États-Unis (Californie)','Australie','Italie','Espagne'],en:['United States (California)','Australia','Italy','Spain']},c:0},
+  {q:{fr:'Quel cépage est à la base du Barolo, "roi des vins" du Piémont ?',en:'Which grape is the basis of Barolo, the "king of wines" in Piedmont?'},a:{fr:['Nebbiolo','Sangiovese','Barbera','Dolcetto'],en:['Nebbiolo','Sangiovese','Barbera','Dolcetto']},c:0},
+  {q:{fr:'L\'arôme caractéristique du Grüner Veltliner autrichien est :',en:'The characteristic aroma of Austrian Grüner Veltliner is:'},a:{fr:['Poivre blanc','Litchi','Cassis','Pamplemousse'],en:['White pepper','Lychee','Blackcurrant','Grapefruit']},c:0},
+  {q:{fr:'Le Gewurztraminer tire son nom d\'un village situé dans quelle région ?',en:'Gewurztraminer takes its name from a village in which region?'},a:{fr:['Tyrol du Sud (Italie / Autriche)','Alsace (France)','Moselle (Allemagne)','Styrie (Autriche)'],en:['South Tyrol (Italy / Austria)','Alsace (France)','Moselle (Germany)','Styria (Austria)']},c:0},
+  {q:{fr:'Quel insecte a ravagé les vignobles européens à la fin du XIXe siècle ?',en:'Which insect ravaged European vineyards at the end of the 19th century?'},a:{fr:['Le phylloxéra','La cochenille','Le mildiou','L\'oïdium'],en:['Phylloxera','Scale insect','Downy mildew','Powdery mildew']},c:0},
+  {q:{fr:'Le cépage Viognier est cultivé en Condrieu, une appellation de quelle région ?',en:'The Viognier grape is grown in Condrieu, an appellation of which region?'},a:{fr:['Vallée du Rhône septentrional','Alsace','Côtes de Provence','Languedoc'],en:['Northern Rhône Valley','Alsace','Côtes de Provence','Languedoc']},c:0}
+];
+
+// ===================== MES APPS =====================
+const MES_APPS=[
+  {id:'6765604355',n:'Piments Peppers',e:'📰'},
+    {id:'6764502966',n:'Residences de Pouvoir',e:'📰'},
+    {id:'6764275412',n:'Chateaux Ile de France',e:'📰'},
+    {id:'6764087562',n:'Aeroports Mytiques',e:'📰'},
+    {id:'6764053375',n:'Gares Mytiques',e:'📰'},
+    {id:'6763987142',n:'Arcs de Triomphe',e:'📰'},
+    {id:'6763857843',n:'Grattes Ciels',e:'📰'},
+  {id:'6762006105',n:'Iconic Covers',e:'📰'},
+  {id:'6763507194',n:'Hotels RoofTop',e:'🏨'},
+  {id:'6762618424',n:'Ponts du Monde',e:'🌉'},
+  {id:'6763076110',n:'Paquebots',e:'🚢'},
+  {id:'6763069304',n:'Avions Légende',e:'✈️'},
+  {id:'6763071567',n:'Voitures Légende',e:'🏎️'},
+  {id:'6762077646',n:'Flip Board',e:'🟫'},{id:'6762632868',n:'Trains',e:'🚂'},{id:'6762823383',n:'Châteaux Loire',e:'🏰'},{id:'6762598304',n:'Mers & Océans',e:'🌊'},{id:'6762594201',n:'Détroits',e:'🗺️'},{id:'6762558969',n:'ColorCode',e:'🎨'},{id:'6762552826',n:'Lexigo',e:'🔤'},{id:'6762542395',n:'Conquêtes',e:'⚖️'},{id:'6762522136',n:'Dynasties Chine',e:'🐉'},{id:'6762452564',n:'Dynasties Russie',e:'🦅'},{id:'6762370541',n:'États-Unis',e:'🗽'},{id:'6762091681',n:'Bataille Navale',e:'⚓'},{id:'6762098486',n:'Familles Royales',e:'👑'},{id:'6762263227',n:'Leaders EU',e:'🏛️'},{id:'6762346365',n:'Pays UE',e:'🇪🇺'},{id:'6762256169',n:'Présidents US',e:'🦅'},{id:'6762076518',n:'Dames',e:'⬛'},{id:'6761993002',n:'Comédie Fr.',e:'🎭'},{id:'6761769529',n:'Institut France',e:'🏛️'},{id:'6761324444',n:'Présidents FR',e:'🗼'},{id:'6761709149',n:'Saint-Denis',e:'⛪'},{id:'6761685637',n:'Arbres France',e:'🌳'},{id:'6761363063',n:'Sénat',e:'🏛️'},{id:'6761656628',n:'Compositeurs',e:'🎼'},{id:'6761374601',n:'Maréchaux',e:'⚔️'},{id:'6761322546',n:'Rois de France',e:'👑'},{id:'6761361079',n:'Assemblée',e:'🏛️'},{id:'6761335268',n:'Panthéon',e:'🏛️'},{id:'1483084001',n:'Belote Calc',e:'🃏'},{id:'6760751055',n:'Cimetières',e:'🕯️'},{id:'1481989301',n:'Tarots Calc',e:'🔮'},{id:'6761334922',n:'Académie Fr.',e:'📚'},{id:'6761293938',n:'Scènes Paris',e:'🎪'},{id:'6760890465',n:'Musées Paris',e:'🖼️'},{id:'6760929391',n:'Théâtres Paris',e:'🎭'},{id:'6760617965',n:'MesRestaurants',e:'🍽️'},{id:'6760126279',n:'Cave Manager',e:'🍷'},{id:'6759219383',n:'Frigo Manager',e:'🧊'},{id:'1475884625',n:'Toi ou Moi',e:'💕'}
+];
+
+// ===================== STATE =====================
+let lang='fr',currentRegion='Tous',currentSearch='',currentTab='list';
+let quizIdx=0,quizScore=0,quizAnswered=false;
+let mapInitialized=false,leafletMap=null;
+
+// ===================== LANG =====================
+function toggleLang(){
+  lang=lang==='fr'?'en':'fr';
+  document.querySelector('.lang-btn').textContent=lang==='fr'?'🇬🇧':'🇫🇷';
+  document.getElementById('appTitleEl').textContent=lang==='fr'?'🍇 Cépages du Monde':'🍇 Grapes of the World';
+  document.getElementById('searchInput').placeholder=lang==='fr'?'Rechercher un cépage...':'Search a grape variety...';
+  filterCards();
+  if(currentTab==='rank') renderRank();
+  if(currentTab==='vignobles') renderVignobles();
+  if(currentTab==='histoire') renderHistoire();
+  if(currentTab==='quiz') renderQuiz();
+}
+
+// ===================== TABS =====================
+function switchTab(tab,el){
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  currentTab=tab;
+  var map2={list:'listView',rank:'rankView',map:'mapView',vignobles:'vignobleView',histoire:'histoireView',quiz:'quizView',apps:'appsView'};
+  ['listView','rankView','mapView','vignobleView','histoireView','quizView','appsView'].forEach(function(v){
+    var e2=document.getElementById(v);
+    if(v===map2[tab]){
+      if(v==='listView'||v==='mapView'){e2.style.display='flex';e2.style.flexDirection='column';}
+      else e2.classList.remove('hidden');
+    } else {
+      if(v==='listView'||v==='mapView') e2.style.display='none';
+      else e2.classList.add('hidden');
+    }
+  });
+  if(tab==='map') initMap();
+  if(tab==='rank') renderRank();
+  if(tab==='vignobles') renderVignobles();
+  if(tab==='histoire') renderHistoire();
+  if(tab==='quiz') renderQuiz();
+  if(tab==='apps') renderApps();
+}
+
+// ===================== CHIPS =====================
+var REGIONS=['Tous','Europe','Amériques','Afrique','Asie'];
+function buildChips(){
+  var html='';
+  REGIONS.forEach(function(r){
+    html+='<button class="chip'+(r===currentRegion?' active':'')+'" onclick="setRegion(\''+r+'\')">'+r+'</button>';
+  });
+  document.getElementById('chipsContainer').innerHTML=html;
+}
+function setRegion(r){
+  currentRegion=r;
+  buildChips();
+  filterCards();
+}
+
+// ===================== LISTE =====================
+function filterCards(){
+  var q=document.getElementById('searchInput').value.toLowerCase();
+  currentSearch=q;
+  var filtered=CEPAGES.filter(function(c){
+    var d=c[lang];
+    var matchR=currentRegion==='Tous'||c.region===currentRegion;
+    var matchQ=!q||d.n.toLowerCase().indexOf(q)>=0||d.o.toLowerCase().indexOf(q)>=0||c.couleur.toLowerCase().indexOf(q)>=0;
+    return matchR&&matchQ;
+  });
+  var html='<div class="cards">';
+  filtered.forEach(function(c){
+    var d=c[lang];
+    var couleurLabel=c.couleur==='Rouge'?(lang==='fr'?'Rouge':'Red'):c.couleur==='Blanc'?(lang==='fr'?'Blanc':'White'):c.couleur==='Rose'?(lang==='fr'?'Rosé':'Rosé'):'';
+    var couleurClass=c.couleur==='Rouge'?'rouge':c.couleur==='Blanc'?'blanc':'rose';
+    html+='<div class="card" onclick="openDetail('+c.id+')">'
+      +'<div class="grape-img-wrap" id="imgwrap'+c.id+'"><span>'+c.e+'</span></div>'
+      +'<div class="card-info">'
+      +'<div class="card-name">'+d.n+'</div>'
+      +'<div class="card-origin">'+d.o+'</div>'
+      +'<div class="arome-bar"><div class="arome-fill" style="width:'+c.arome+'%"></div></div>'
+      +'<div class="cepages-tags"><span class="cepage-tag '+couleurClass+'">'+couleurLabel+'</span><span class="cepage-tag">'+c.region+'</span></div>'
+      +'</div></div>';
+  });
+  html+='</div>';
+  document.getElementById('cardsContainer').innerHTML=html;
+  filtered.forEach(function(c){loadImg(c);});
+}
+
+function loadImg(c){
+  var wrap=document.getElementById('imgwrap'+c.id);
+  if(!wrap) return;
+  // Méthode 1 : URL directe déjà connue (wt)
+  if(c.wt){
+    _fetchImg(c.wt, function(src){
+      var img=document.createElement('img');
+      img.className='grape-img';
+      img.onload=function(){wrap.innerHTML='';wrap.appendChild(img);};
+      img.onerror=function(){if(c.wiki) _loadViaWiki(c.wiki,wrap);};
+      img.src=src;
+    }, function(){ if(c.wiki) _loadViaWiki(c.wiki,wrap); });
+  } else if(c.wiki){
+    // Méthode 2 : API Wikipedia
+    _loadViaWiki(c.wiki, wrap);
+  }
+}
+function _loadViaWiki(title, wrap){
+  var apiUrl='https://en.wikipedia.org/w/api.php?action=query&titles='+encodeURIComponent(title)+'&prop=pageimages&pithumbsize=400&format=json&origin=*';
+  if(typeof Capacitor!='undefined'&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorHttp){
+    Capacitor.Plugins.CapacitorHttp.get({url:apiUrl}).then(function(r){
+      var data=typeof r.data==='string'?JSON.parse(r.data):r.data;
+      var pages=data.query.pages;
+      var page=pages[Object.keys(pages)[0]];
+      if(page&&page.thumbnail&&page.thumbnail.source){
+        _fetchImg(page.thumbnail.source, function(src){
+          var img=document.createElement('img');
+          img.className='grape-img';
+          img.onload=function(){wrap.innerHTML='';wrap.appendChild(img);};
+          img.src=src;
+        }, function(){});
+      }
+    }).catch(function(){});
+  } else {
+    fetch(apiUrl).then(function(r){return r.json();}).then(function(data){
+      var pages=data.query.pages;
+      var page=pages[Object.keys(pages)[0]];
+      if(page&&page.thumbnail&&page.thumbnail.source){
+        var img=document.createElement('img');
+        img.className='grape-img';
+        img.onload=function(){wrap.innerHTML='';wrap.appendChild(img);};
+        img.onerror=function(){};
+        img.src=page.thumbnail.source;
+      }
+    }).catch(function(){});
+  }
+}
+function _fetchImg(url, onSrc, onErr){
+  if(typeof Capacitor!='undefined'&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorHttp){
+    Capacitor.Plugins.CapacitorHttp.get({url:url,responseType:'arraybuffer'}).then(function(r){
+      onSrc('data:image/jpeg;base64,'+r.data);
+    }).catch(onErr);
+  } else {
+    onSrc(url);
+  }
+}
+
+// ===================== DETAIL =====================
+function openDetail(id){
+  var c=CEPAGES.find(function(x){return x.id===id;});
+  if(!c) return;
+  var d=c[lang];
+  document.getElementById('detailTitle').textContent=c.e+' '+d.n;
+  var couleurLabel=c.couleur==='Rouge'?(lang==='fr'?'Rouge':'Red'):c.couleur==='Blanc'?(lang==='fr'?'Blanc':'White'):(lang==='fr'?'Rosé':'Rosé');
+  var couleurClass=c.couleur==='Rouge'?'rouge':c.couleur==='Blanc'?'blanc':'rose';
+  var imgHtml='<div class="detail-img-container" id="detailImgCont">'+c.e+'</div>';
+  var body=imgHtml
+    +'<div class="detail-content">'
+    +'<div class="detail-meta">'
+    +'<div class="meta-tag">🌍 <span>'+c.region+'</span></div>'
+    +'<div class="meta-tag">📍 <span>'+d.o+'</span></div>'
+    +'<div class="meta-tag cepage-tag '+couleurClass+'" style="background:var(--bg3)">🍇 <span>'+couleurLabel+'</span></div>'
+    +'</div>'
+    +'<div class="profil-box">'
+    +profilRow(lang==='fr'?'Intensité':'Intensity',c.intensite,'fill-intensite')
+    +profilRow(lang==='fr'?'Arômes':'Aromas',c.arome,'fill-arome')
+    +profilRow(lang==='fr'?'Tanins':'Tannins',c.tanin,'fill-tanin')
+    +profilRow(lang==='fr'?'Acidité':'Acidity',c.acidite,'fill-acidite')
+    +profilRow(lang==='fr'?'Prestige':'Prestige',c.prestige,'fill-prestige')
+    +'</div>'
+    +'<div class="detail-section"><h3>'+(lang==='fr'?'Description':'Description')+'</h3><p>'+d.d+'</p></div>'
+    +'</div>';
+  document.getElementById('detailBody').innerHTML=body;
+  var dv=document.getElementById('detailView');
+  dv.style.display='flex';dv.style.flexDirection='column';
+  // Load image in detail
+  var cont=document.getElementById('detailImgCont');
+  if(c.wt){
+    _fetchImg(c.wt, function(src){
+      var img=document.createElement('img');
+      img.onload=function(){cont.innerHTML='';cont.appendChild(img);};
+      img.onerror=function(){if(c.wiki) _loadViaWikiDetail(c.wiki,cont);};
+      img.src=src;
+    }, function(){ if(c.wiki) _loadViaWikiDetail(c.wiki,cont); });
+  } else if(c.wiki){
+    _loadViaWikiDetail(c.wiki, cont);
+  }
+}
+function _loadViaWikiDetail(title, cont){
+  var apiUrl='https://en.wikipedia.org/w/api.php?action=query&titles='+encodeURIComponent(title)+'&prop=pageimages&pithumbsize=800&format=json&origin=*';
+  if(typeof Capacitor!='undefined'&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorHttp){
+    Capacitor.Plugins.CapacitorHttp.get({url:apiUrl}).then(function(r){
+      var data=typeof r.data==='string'?JSON.parse(r.data):r.data;
+      var pages=data.query.pages;
+      var page=pages[Object.keys(pages)[0]];
+      if(page&&page.thumbnail&&page.thumbnail.source){
+        _fetchImg(page.thumbnail.source, function(src){
+          var img=document.createElement('img');
+          img.onload=function(){cont.innerHTML='';cont.appendChild(img);};
+          img.src=src;
+        }, function(){});
+      }
+    }).catch(function(){});
+  } else {
+    fetch(apiUrl).then(function(r){return r.json();}).then(function(data){
+      var pages=data.query.pages;
+      var page=pages[Object.keys(pages)[0]];
+      if(page&&page.thumbnail&&page.thumbnail.source){
+        var img=document.createElement('img');
+        img.onload=function(){cont.innerHTML='';cont.appendChild(img);};
+        img.src=page.thumbnail.source;
+      }
+    }).catch(function(){});
+  }
+}
+function profilRow(label,val,cls){
+  return '<div class="profil-row">'
+    +'<div class="profil-label">'+label+'</div>'
+    +'<div class="profil-bar"><div class="profil-fill '+cls+'" style="width:'+val+'%"></div></div>'
+    +'<div class="profil-value">'+val+'</div>'
+    +'</div>';
+}
+function closeDetail(){document.getElementById('detailView').style.display='none';}
+
+// ===================== CLASSEMENT =====================
+function renderRank(){
+  var sorted=CEPAGES.slice().sort(function(a,b){return b.prestige-a.prestige;});
+  var html='<p style="font-size:12px;color:var(--muted);font-style:italic;padding:10px 10px 8px">'
+    +(lang==='fr'?'Classés par prestige mondial':'Ranked by worldwide prestige')+'</p>';
+  sorted.forEach(function(c,i){
+    var d=c[lang];
+    html+='<div class="rank-item" onclick="openDetail('+c.id+')">'
+      +'<div class="rank-num'+(i<3?' top3':'')+'>'+(i+1)+'</div>'
+      +'<div class="rank-emoji">'+c.e+'</div>'
+      +'<div class="rank-info"><div class="rank-name">'+d.n+'</div><div class="rank-region">'+d.o+'</div></div>'
+      +'<div class="rank-bar-wrap"><div class="rank-bar"><div class="rank-fill" style="width:'+c.prestige+'%"></div></div>'
+      +'<div class="rank-score">'+c.prestige+'/100</div></div>'
+      +'</div>';
+  });
+  document.getElementById('rankList').innerHTML=html;
+}
+
+// ===================== MAP =====================
+function initMap(){
+  if(mapInitialized) return;
+  mapInitialized=true;
+  leafletMap=L.map('map',{zoomControl:true,attributionControl:false}).setView([30,10],2);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(leafletMap);
+  CEPAGES.forEach(function(c){
+    var d=c[lang];
+    var couleurHex=c.couleur==='Rouge'?'#c0405a':c.couleur==='Blanc'?'#c9a84c':'#e8a0c0';
+    var icon=L.divIcon({html:'<div style="background:'+couleurHex+';width:28px;height:28px;border-radius:50%;border:2px solid #e8c97a;display:flex;align-items:center;justify-content:center;font-size:14px">'+c.e+'</div>',iconSize:[28,28],className:''});
+    var marker=L.marker([c.lat,c.lng],{icon:icon}).addTo(leafletMap);
+    marker.bindPopup(
+      '<div class="popup-name">'+c.e+' '+d.n+'</div>'
+      +'<div style="font-size:12px;color:var(--muted)">'+d.o+'</div>'
+      +'<button class="popup-btn" onclick="openDetail('+c.id+')">'+(lang==='fr'?'Voir la fiche':'View details')+'</button>'
+    );
+  });
+  // Marqueurs vignobles (étoile dorée = pays producteur)
+  VIGNOBLES.forEach(function(v){
+    var info=v[lang];
+    var icon=L.divIcon({html:'<div style="background:#1a1a30;width:34px;height:34px;border-radius:6px;border:2px solid #c9a84c;display:flex;align-items:center;justify-content:center;font-size:20px">'+v.flag+'</div>',iconSize:[34,34],className:''});
+    var marker=L.marker([v.lat,v.lng],{icon:icon}).addTo(leafletMap);
+    marker.bindPopup(
+      '<div class="popup-name">'+v.flag+' '+v.pays+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-bottom:4px">'+v.total+'</div>'
+      +'<div style="font-size:12px;color:var(--gold)">&#127942; '+info.leader+'</div>'
+    );
+  });
+  setTimeout(function(){leafletMap.invalidateSize();},100);
+}
+
+// ===================== VIGNOBLES =====================
+function renderVignobles(){
+  var html='<p style="font-size:12px;color:var(--muted);font-style:italic;padding:4px 4px 10px;line-height:1.5">'
+    +(lang==='fr'?'Source : OIV 2018 — 15 plus grands vignobles du monde (>65 000 ha)':'Source: OIV 2018 — 15 largest vineyards worldwide (>65,000 ha)')+'</p>';
+  VIGNOBLES.forEach(function(v,idx){
+    var info=v[lang];
+    html+='<div class="vignob-card">'
+      +'<div class="vignob-header" onclick="toggleVB('+idx+')">'
+      +'<div class="vignob-flag">'+v.flag+'</div>'
+      +'<div class="vignob-info">'
+      +'<div class="vignob-country">'+(idx+1)+'. '+v.pays+'</div>'
+      +'<div class="vignob-total">'+v.total+'</div>'
+      +'<div class="vignob-leader">&#127942; '+info.leader+'</div>'
+      +'</div>'
+      +'<div class="vignob-chev" id="vc'+idx+'">&#9654;</div>'
+      +'</div>'
+      +'<div class="vignob-body" id="vb'+idx+'">'
+      +'<p class="vignob-note">'+info.note+'</p>';
+    var maxP=v.c[0].p;
+    v.c.forEach(function(cp,ci){
+      var dc=cp.t==='r'?'vdot-r':cp.t==='b'?'vdot-b':'vdot-p';
+      var bw=Math.round((cp.p/maxP)*100);
+      var haStr=cp.ha>=1000?(cp.ha/1000).toFixed(0)+' k':cp.ha;
+      html+='<div class="vignob-row">'
+        +'<div class="vignob-rk">'+(ci+1)+'</div>'
+        +'<div class="vdot '+dc+'"></div>'
+        +'<div class="vignob-nm">'+cp.n+'</div>'
+        +'<div class="vignob-bar"><div class="vignob-bar-fill" style="width:'+bw+'%"></div></div>'
+        +'<div class="vignob-pct">'+cp.p+'%</div>'
+        +'<div class="vignob-ha">'+haStr+' ha</div>'
+        +'</div>';
+    });
+    html+='</div></div>';
+  });
+  document.getElementById('vignobleList').innerHTML=html;
+}
+function toggleVB(idx){
+  var b=document.getElementById('vb'+idx);
+  var c=document.getElementById('vc'+idx);
+  var o=b.classList.contains('open');
+  b.classList.toggle('open',!o);
+  c.classList.toggle('open',!o);
+}
+
+// ===================== HISTOIRE =====================
+function renderHistoire(){
+  document.getElementById('histoireContainer').innerHTML=
+    '<p style="font-size:12px;color:var(--muted);font-style:italic;padding:0 4px 12px">'
+    +(lang==='fr'?'De l\'Antiquité à nos jours, l\'histoire de la vigne et du vin.':'From Antiquity to today, the history of vine and wine.')
+    +'</p>'
+    +HISTOIRE.map(function(h){
+      var d=h[lang];
+      return '<div class="histoire-card">'
+        +'<div class="histoire-card-header">'
+        +'<div class="histoire-emoji">'+h.emoji+'</div>'
+        +'<div><div class="histoire-period">'+d.periode+'</div><div class="histoire-era">'+d.ere+'</div></div>'
+        +'</div>'
+        +'<p class="histoire-text">'+d.texte+'</p>'
+        +'</div>';
+    }).join('');
+}
+
+// ===================== QUIZ =====================
+function renderQuiz(){
+  var cont=document.getElementById('quizContainer');
+  if(quizIdx>=QUIZ.length){
+    cont.innerHTML='<div class="quiz-score-bar"><div class="quiz-score-num">'+quizScore+'/'+QUIZ.length+'</div>'
+      +'<div class="quiz-score-label">'+(lang==='fr'?'Score final · Félicitations !':'Final score · Congratulations!')+'</div></div>'
+      +'<button class="quiz-reset" onclick="resetQuiz()">'+(lang==='fr'?'🔄 Recommencer':'🔄 Play again')+'</button>';
+    return;
+  }
+  var q=QUIZ[quizIdx];
+  cont.innerHTML='<div class="quiz-score-bar"><div class="quiz-score-num">'+(quizIdx+1)+'/'+QUIZ.length+'</div>'
+    +'<div class="quiz-score-label">'+(lang==='fr'?'Question · Score : '+quizScore:'Question · Score: '+quizScore)+'</div></div>'
+    +'<div class="quiz-question"><div class="quiz-q-text">'+q.q[lang]+'</div>'
+    +'<div class="quiz-answers">'+q.a[lang].map(function(a,i){return '<button class="quiz-answer" onclick="answerQuiz('+i+',this)">'+a+'</button>';}).join('')+'</div>'
+    +'<button class="quiz-next" id="quizNext" onclick="nextQuestion()">'+(lang==='fr'?'Question suivante ➔':'Next question ➔')+'</button></div>';
+}
+function answerQuiz(idx,el){
+  if(quizAnswered) return;
+  quizAnswered=true;
+  var q=QUIZ[quizIdx];
+  document.querySelectorAll('.quiz-answer').forEach(function(b,i){
+    b.classList.add('revealed');
+    if(i===q.c) b.classList.add('correct');
+    else if(i===idx) b.classList.add('wrong');
+  });
+  if(idx===q.c) quizScore++;
+  document.getElementById('quizNext').style.display='block';
+}
+function nextQuestion(){quizIdx++;quizAnswered=false;renderQuiz();}
+function resetQuiz(){quizIdx=0;quizScore=0;quizAnswered=false;renderQuiz();}
+
+// ===================== APPS =====================
+function renderApps(){
+  document.getElementById('appsList').innerHTML=
+    '<div class="apps-section-title">🍇 Cépages du Monde</div>'
+    +'<div style="padding:10px 16px 14px;font-size:13px;color:var(--muted);font-style:italic">'
+    +(lang==='fr'?'Découvrez les autres applications de Michel Garlandat :':'Discover other apps by Michel Garlandat:')
+    +'</div><div class="apps-grid">'
+    +MES_APPS.map(function(a){
+      return '<div class="app-item" onclick="openApp(\''+a.id+'\')"><div class="app-icon" id="appicon-'+a.id+'"><span>'+a.e+'</span></div><div class="app-name">'+a.n+'</div></div>';
+    }).join('')+'</div>';
+  MES_APPS.forEach(function(a){
+    var cb='itcb'+a.id;
+    window[cb]=function(d){
+      var w=document.getElementById('appicon-'+a.id);
+      if(!w) return;
+      var img=document.createElement('img');
+      img.src=d.results[0].artworkUrl60;
+      w.innerHTML='';w.appendChild(img);
+    };
+    var s=document.createElement('script');
+    s.src='https://itunes.apple.com/lookup?id='+a.id+'&callback='+cb;
+    document.body.appendChild(s);
+  });
+}
+function openApp(id){window.open('https://apps.apple.com/app/id'+id,'_system');}
+
+// ===================== INIT =====================
+window.openDetail=openDetail;
+buildChips();
+filterCards();
+</script>
+</body>
+</html>
